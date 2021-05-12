@@ -2,7 +2,7 @@ from datetime import datetime
 
 
 def log(msg) -> str:
-    print('PVC: ' + msg)
+    print('PVC: ' + str(msg))
     return msg
 
 
