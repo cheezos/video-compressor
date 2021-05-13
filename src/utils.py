@@ -12,9 +12,17 @@ def raw_time() -> float:
     return datetime.now()
 
 def list_videos(str) -> list:
-    vids = str.split(';')
-    print(f'Selected {len(vids)} video(s).')
-    return vids
+    vids_old = str.split(';')
+    vids_new = []
+
+    for vid in vids_old:
+        vid2 = vid.replace(' ', '-')
+        os.rename(vid, vid2)
+        vids_new.append(vid2)
+
+    print('Renamed videos with spaces.')
+    print(f'Selected {len(vids_new)} video(s).')
+    return vids_new
 
 def get_ffmpeg() -> str:
     ffmpeg = 'ffmpeg' if platform.system() == 'Linux' else os.getcwd() + '\FFmpeg\ffmpeg.exe'

@@ -152,7 +152,7 @@ class App:
                 if self.proc.poll() or any(x in line for x in ['', 'failed']):
                     self.trimming = False
                     self.trimmed = True
-                    print('Trimming complete.')
+                    print('Trimming complete, starting compression.')
                     self.start()
             
             while (self.compressing):
@@ -160,9 +160,13 @@ class App:
 
                 if self.proc.poll() or any(x in line for x in ['', 'failed']):
                     self.compressing = False
-                    # self.cur_queue += 1
-                    print('Compression complete.')
-                    # self.start()
+                    print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed.')
+
+                    if (self.cur_queue + 1 < len(self.selected_videos)):
+                        self.cur_queue += 1
+                        self.start()
+                    else:
+                        print('Job done!')
 
     def trim(self) -> None:
         input = f'-i "{self.cur_video}"'
@@ -174,13 +178,11 @@ class App:
         if not self.trimming: self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
 
         self.trimming = True
-
         print(f'Trimming {self.cur_video} from {self.trim_s} to {self.trim_e}, please wait...')
 
     def compress(self):
         if self.trimmed:
             self.cur_video = self.cur_video_trimmed
-
             print(f'Using trimmed version: {self.cur_video_trimmed}')
 
         input = f'-i "{self.cur_video}"'
@@ -195,7 +197,6 @@ class App:
         if not self.compressing: self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
 
         self.compressing = True
-        
         print(f'Compressing video {self.cur_queue + 1}/{len(self.selected_videos)}, please wait...')
 
     def get_video_data(self, video):
