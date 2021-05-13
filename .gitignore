@@ -112,3 +112,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+TEMP
+ffmpeg2pass-0.log.mbtree
