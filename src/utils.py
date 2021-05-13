@@ -17,8 +17,6 @@ def list_videos(str) -> list:
     return vids
 
 def seconds_to_ffmpeg_readable(seconds) -> str:
-
-
     return str(seconds)
 
 def remove_extension(video_path) -> str:
