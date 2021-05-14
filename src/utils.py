@@ -3,7 +3,9 @@ from datetime import datetime
 import platform
 import os
 import subprocess
-from sys import stdout
+import dload
+import fnmatch
+import shutil
 
 def pretty_time() -> str:
     return datetime.now().strftime("%H:%M:%S")
@@ -41,15 +43,37 @@ def validate_ffmpeg() -> bool:
             print('Found FFmpeg.')
             return True
     else:
-        if os.path.exists(os.getcwd() + '/FFmpeg/ffmpeg.exe') and os.path.exists(os.getcwd() + '/FFmpeg/ffprobe.exe'):
+        if os.path.exists(os.getcwd() + '\FFmpeg\ffmpeg.exe') and os.path.exists(os.getcwd() + '\FFmpeg\ffprobe.exe'):
             print('Found FFmpeg.')
             return True
         else:
-            # install_ffmpeg()
-            pass
+            install_ffmpeg()
 
-    print('Could not find FFmpeg.')
+    print('Could not locate FFmpeg.')
     return False
+
+def install_ffmpeg() -> None:
+        if platform.system() == 'Windows':
+            if not os.path.exists(os.getcwd() + '\FFmpeg'):
+                os.mkdir(os.getcwd() + '\FFmpeg')
+                print('FFmpeg directory created.')
+            
+            print('Downloading FFmpeg, please wait...')
+            dload.save_unzip('https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip', os.getcwd() + '\FFmpeg')
+            print('FFmpeg downloaded.')
+
+            files = get_files()
+
+            if files:
+                for name in files:
+                    shutil.move(name, os.getcwd() + '\FFmpeg')
+
+                print('Moved FFmpeg contents.')
+            
+def get_files() -> None:
+    for path, dirlist, filelist in os.walk(os.getcwd() + '\FFmpeg'):
+        for name in fnmatch.filter(filelist, '*.exe'):
+            yield os.path.join(path, name)
 
 def get_video_duration(video) -> float:
     proc = subprocess.Popen(f'{get_ffprobe()} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{video}"', stdout=subprocess.PIPE, shell=True)

@@ -5,7 +5,11 @@
 import platform
 import os
 import subprocess
+from sys import stderr
+from PySimpleGUI.PySimpleGUI import cprint
+import psutil
 import PySimpleGUI as sg
+import threading
 
 from utils import validate_ffmpeg, list_videos, remove_extension, get_extension, get_ffmpeg, calculate_video_bitrate
 
@@ -85,24 +89,24 @@ class App:
              sg.Column(options_column_right, vertical_alignment='left', element_justification='left'), sg.Text('', pad=(0, 0), key='col_right')],
             [sg.HorizontalSeparator(pad=None)],
             [sg.Input('', size=(40, 1), key='select_videos', change_submits=True), sg.FilesBrowse('Select Videos', size=(10, 1))],
-            [sg.Output(size=(60, 10), key='output')],
+            [sg.Output(size=(60, 10), key='output', echo_stdout_stderr=True)],
             [sg.Button('Start', key='start'), sg.Button('Abort')]
         ]
 
         self.create_window()
-
-    def install_ffmpeg(self) -> None:
-        if self.os == 'Windows':
-            if not os.path.exists(os.getcwd() + '/FFmpeg'):
-                os.mkdir(os.getcwd() + '/FFmpeg')
-                self.msg = print('FFmpeg directory created.')
 
     def create_window(self) -> None:
         # sg.theme('SystemDefault1')
         self.window = sg.Window(f"{self.author}'s Video Compressor", self.layout, resizable=False, finalize=True, element_justification='center')
         self.window['col_left'].expand(True, True, True)
         self.window['col_right'].expand(True, True, True)
-        if not validate_ffmpeg(): sg.popup("Couldn't detect FFmpeg on your computer!")
+
+        if not validate_ffmpeg():
+            if platform.system() == 'Windows':
+                sg.popup("Couldn't locate FFmpeg, installing...\nYou make close this window.")
+            else:
+                sg.popup("Couldn't locate FFmpeg, please install it before continuing.")
+
         self.loop()
 
     def apply_options(self, values) -> None:
@@ -135,6 +139,9 @@ class App:
                 print('Using portrait mode.')
 
     def start(self) -> None:
+        if not validate_ffmpeg():
+            print("Couldn't locate FFmpeg, please install it first.")
+
         if not self.selected_videos or len(self.selected_videos) == 0:
             print('No videos selected!')
         else:
@@ -145,28 +152,50 @@ class App:
                     self.trim()
                 else:
                     self.compress()
-            
-            while (self.trimming):
-                line = str(self.proc.stdout.readline())
 
-                if self.proc.poll() or any(x in line for x in ['', 'failed']):
-                    self.trimming = False
-                    self.trimmed = True
-                    print('Trimming complete, starting compression.')
+            if (self.trimming):
+                self.trim_loop()
+            elif (self.compressing):
+                while (self.compressing):
+                    line = str(self.proc.stdout.readline())
+
+                    if self.proc.poll() or any(x in line for x in ['', 'failed']):
+                        self.compressing = False
+                        self.trimmed = False
+                        print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed.')
+
+                        if (self.cur_queue + 1 < len(self.selected_videos)):
+                            self.cur_queue += 1
+                            self.start()
+                        else:
+                            print('Job done!')
+                    
+                    self.window.write_event_value('thread', (line))
+    
+    def trim_loop(self) -> None:
+        while (self.trimming):
+            line = str(self.proc.stdout.readline())
+
+            if self.proc.poll() or any(x in line for x in ['', 'failed']):
+                self.trimming = False
+                self.trimmed = True
+                print('Trimming complete, starting compression.')
+                self.start()
+    
+    def compression_loop(self) -> None:
+        while (self.compressing):
+            line = str(self.proc.stdout.readline())
+
+            if self.proc.poll() or any(x in line for x in ['', 'failed']):
+                self.compressing = False
+                self.trimmed = False
+                print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed.')
+
+                if (self.cur_queue + 1 < len(self.selected_videos)):
+                    self.cur_queue += 1
                     self.start()
-            
-            while (self.compressing):
-                line = str(self.proc.stdout.readline())
-
-                if self.proc.poll() or any(x in line for x in ['', 'failed']):
-                    self.compressing = False
-                    print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed.')
-
-                    if (self.cur_queue + 1 < len(self.selected_videos)):
-                        self.cur_queue += 1
-                        self.start()
-                    else:
-                        print('Job done!')
+                else:
+                    print('Job done!')
 
     def trim(self) -> None:
         input = f'-i "{self.cur_video}"'
@@ -180,7 +209,7 @@ class App:
         self.trimming = True
         print(f'Trimming {self.cur_video} from {self.trim_s} to {self.trim_e}, please wait...')
 
-    def compress(self):
+    def compress(self) -> None:
         if self.trimmed:
             self.cur_video = self.cur_video_trimmed
             print(f'Using trimmed version: {self.cur_video_trimmed}')
@@ -199,17 +228,33 @@ class App:
         self.compressing = True
         print(f'Compressing video {self.cur_queue + 1}/{len(self.selected_videos)}, please wait...')
 
-    def get_video_data(self, video):
+    def get_video_data(self, video) -> None:
         self.cur_video = video
         self.cur_video_name = remove_extension(self.cur_video)
         self.cur_video_path = self.cur_video.split(self.cur_video_name)[0]
         self.cur_video_extension = get_extension(self.cur_video)
         self.cur_video_trimmed = f'{self.cur_video_path}{self.cur_video_name}-trimmed{self.cur_video_extension}'
+    
+    def abort(self) -> None:
+        for proc in psutil.process_iter():
+            if 'ffmpeg' in proc.name():
+                p = psutil.Process(proc.pid)
+                p.kill()
+                print('Killed FFmpeg process.')
+
+                try:
+                    os.remove('TEMP')
+                    print('Cleaned up temp files.')
+                except:
+                    pass
+
+                self.compressing = False
+                self.trimming = False
+                self.trimmed = False
 
     def loop(self) -> None:
         while True:
             event, values, = self.window.read()
-            # print(event)
 
             if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
                 break
@@ -219,7 +264,10 @@ class App:
 
             if event == 'start':
                 self.apply_options(values)
-                self.start()
+                threading.Thread(target=self.start(), args=(self.window,), daemon=True).start()
+            
+            if event == 'abort':
+                self.abort()
 
         self.window.close()
 
