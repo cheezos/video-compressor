@@ -8,6 +8,7 @@ import subprocess
 import sys
 import psutil
 import asyncio
+import webbrowser
 import PySimpleGUI as sg
 
 from utils import validate_ffmpeg, list_videos, get_name, get_extension, get_path, get_ffmpeg, calculate_video_bitrate, install_ffmpeg
@@ -27,8 +28,9 @@ class App:
         self.process_started = False
 
         # UI Preferences
-        self.font_large = 'Arial 14 bold'
+        self.font_large = 'Arial 16 bold'
         self.font_small = 'Arial 12'
+        self.font_tiny = 'Arial 10'
 
         # Options
         self.res_w = 1280
@@ -81,16 +83,18 @@ class App:
         ]
 
         self.layout = [
-            [sg.Text(f"{self.author}'s Video Compressor", font=self.font_large)],
-            [sg.Text(f"{self.version} | {self.github}", font=self.font_small)],
-            [sg.HorizontalSeparator(pad=None)],
+            [sg.Text(f"{self.author}'s Video Compressor {self.version}", font=self.font_large)],
+            [sg.Text('')],
             [sg.Text('', pad=(0, 0), key='col_left'), sg.Column(options_column_left, vertical_alignment='right', element_justification='right'),
              sg.VerticalSeparator(pad=None),
              sg.Column(options_column_right, vertical_alignment='left', element_justification='left'), sg.Text('', pad=(0, 0), key='col_right')],
-            [sg.HorizontalSeparator(pad=None)],
+            [sg.Text('')],
             [sg.Input('', size=(40, 1), key='select_videos', change_submits=True), sg.FilesBrowse('Select Videos', size=(10, 1))],
             [sg.Output(size=(60, 10), key='output', echo_stdout_stderr=True)],
-            [sg.Button('Start', key='start', size=(10, 1)), sg.Button('Abort', key='abort', size=(10, 1)), sg.Button('Help', key='help', size=(10, 1))]
+            [sg.Button('Start', key='start', size=(8, 1)), sg.Button('Abort', key='abort', size=(8, 1)), sg.Button('Help', key='help', size=(8, 1)), sg.Button('Github', key='github', size=(8, 1))],
+            [sg.Text('')],
+            [sg.HorizontalSeparator(pad=None)],
+            [sg.Text(f'Created by {self.author} with Python', font=self.font_tiny)]
         ]
 
         self.loop = asyncio.get_event_loop()
@@ -289,6 +293,9 @@ class App:
             
             if event == 'help':
                 self.help()
+            
+            if event == 'github':
+                webbrowser.open('https://github.com/colthub/video-compressor')
             
             await asyncio.sleep(0.0001)
 
