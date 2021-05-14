@@ -114,3 +114,13 @@ dmypy.json
 .pyre/
 TEMP
 ffmpeg2pass-0.log.mbtree
+src/test.py
+*.css
+*.html
+FFmpeg/ffmpeg-4.4-essentials_build/LICENSE
+*.ffpreset
+FFmpeg/ffmpeg-4.4-essentials_build/README.txt
+FFmpeg/ffmpeg.exe
+FFmpeg/ffplay.exe
+FFmpeg/ffprobe.exe
+src/ffmpeg-release-essentials.zip
