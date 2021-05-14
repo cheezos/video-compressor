@@ -104,7 +104,7 @@ class App:
         print(f'Set audio bitrate to {self.audio_bitrate}.')
         self.fps = float(values['framerate'])
         print(f'Set framerate to {self.fps}fps.')
-        self.file_extension = values['extension']
+        self.file_extension = '.' + values['extension']
         print(f'Set extension to {self.file_extension}.')
         self.trim_s = values['trim_start']
         self.trim_e = values['trim_end']
@@ -208,7 +208,7 @@ class App:
         audio_bitrate = f'-c:a aac -b:a {self.audio_bitrate}k' if not self.remove_audio else '-an'
         fps = f'-r {self.fps}'
         resolution = f'-vf scale={self.res_w}:{self.res_h}'
-        output = f'"{self.cur_video_path}{self.cur_video_name}-compressed{self.cur_video_extension}"'
+        output = f'"{self.cur_video_path}{self.cur_video_name}-compressed{self.file_extension}"'
 
         cmd = f'{self.ffmpeg} -y {input} {codec} {video_bitrate} {fps} {resolution} -pass 1 -an -f mp4 TEMP && {self.ffmpeg} -y {input} {codec} {video_bitrate} {fps} {resolution} -pass 2 {audio_bitrate} {output}'
         
@@ -228,7 +228,6 @@ class App:
         self.cur_video_path = get_path(self.cur_video)
         self.cur_video_extension = get_extension(self.cur_video)
         self.cur_video_trimmed = f'{self.cur_video_path}{self.cur_video_name}-trimmed{self.cur_video_extension}'
-        # print(self.cur_video, self.cur_video_name, self.cur_video_path, self.cur_video_extension, self.cur_video_trimmed)
     
     def abort(self) -> None:
         for proc in psutil.process_iter():
