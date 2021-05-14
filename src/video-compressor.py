@@ -6,8 +6,8 @@ import platform
 import os
 import subprocess
 import sys
-from typing import Sized
 import psutil
+import asyncio
 import PySimpleGUI as sg
 
 from utils import validate_ffmpeg, list_videos, get_name, get_extension, get_path, get_ffmpeg, calculate_video_bitrate, install_ffmpeg
@@ -24,6 +24,7 @@ class App:
         self.compressing = False
         self.trimming = False
         self.trimmed = False
+        self.process_started = False
 
         # UI Preferences
         self.font_large = 'Arial 14 bold'
@@ -89,10 +90,15 @@ class App:
             [sg.HorizontalSeparator(pad=None)],
             [sg.Input('', size=(40, 1), key='select_videos', change_submits=True), sg.FilesBrowse('Select Videos', size=(10, 1))],
             [sg.Output(size=(60, 10), key='output', echo_stdout_stderr=True)],
-            [sg.Button('Start', key='start', size=(10, 1)), sg.Button('Abort', disabled=True, tooltip='Disabled until asynchronous solution is implemented.', size=(10, 1)), sg.Button('Help', key='help', size=(10, 1))]
+            [sg.Button('Start', key='start', size=(10, 1)), sg.Button('Abort', key='abort', size=(10, 1)), sg.Button('Help', key='help', size=(10, 1))]
         ]
 
-        self.ui()
+        self.loop = asyncio.get_event_loop()
+        self.loop.run_until_complete(self.wait_list())
+        self.loop.close()
+
+    async def wait_list(self) -> None:
+        await asyncio.wait([self.ui(), self.trim_loop(), self.compression_loop()])
 
     def apply_options(self, values) -> None:
         self.res_w = int(values['res_w'])
@@ -135,92 +141,91 @@ class App:
                 self.get_video_data(self.selected_videos[self.cur_queue])
 
                 if self.enable_trim and not self.trimmed:
-                    self.trim()
+                    self.trimming = True
                 else:
-                    self.compress() 
-
-            if (self.trimming):
-                self.trim_loop()
-            elif (self.compressing):
-                self.compression_loop()
+                    self.compressing = True
     
-    def trim_loop(self) -> None:
-        while (self.trimming):
-            line = str(self.proc.stdout.readline())
+    async def trim_loop(self) -> None:
+        while True:
+            if self.trimming:
+                if not self.process_started:
+                    input = f'-i "{self.cur_video}"'
+                    trim_start = f'-ss {self.trim_s}'
+                    trim_end = f'-t {self.trim_e}'
+                    output = f'"{self.cur_video_trimmed}"'
+                    cmd = f'{self.ffmpeg} -y {trim_start} {input} {trim_end} -c copy {output}'
 
-            if self.proc.poll() or any(x in line for x in ['', 'failed']):
-                self.trimming = False
-                self.trimmed = True
-                print('Trimming complete, starting compression.')
-                self.start()
-    
-    def compression_loop(self) -> None:
-        while (self.compressing):
-            line = str(self.proc.stdout.readline())
+                    self.process_started = True
+                    self.proc = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
 
-            if self.proc.poll() or any(x in line for x in ['', 'failed']):                
-                self.compressing = False
-                self.trimmed = False
-                print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed.')
-
-                try:
-                    os.remove(self.cur_video_trimmed)
-                    print('Deleting trimmed copy.')
-                except:
-                    pass
-
-                if (self.cur_queue + 1 < len(self.selected_videos)):
-                    self.cur_queue += 1
-                    self.start()
+                    print('Trimming process started.')
                 else:
-                    print('Job done!')
+                    stdout, stderr = await self.proc.communicate()
 
-    def trim(self) -> None:
-        input = f'-i "{self.cur_video}"'
-        trim_start = f'-ss {self.trim_s}'
-        trim_end = f'-t {self.trim_e}'
-        output = f'"{self.cur_video_trimmed}"'
+                    if self.proc.returncode == 0:
+                        self.compressing = True
+                        self.trimming = False
+                        self.trimmed = True
+                        self.process_started = False
+                        print('Trimming complete, starting compression.')
+                    else:
+                        self.compressing = False
+                        self.trimming = False
+                        self.trimmed = False
+                        self.process_started = False
+                        print('Trimming failed, aborting.')
+            
+            await asyncio.sleep(1)
+    
+    async def compression_loop(self) -> None:
+        while True:
+            if self.compressing:
+                if not self.process_started:
+                    if self.trimmed:
+                        self.cur_video = self.cur_video_trimmed
+                        print(f'Using trimmed version: {self.cur_video_trimmed}')
 
-        cmd = f'{self.ffmpeg} -y {trim_start} {input} {trim_end} -c copy {output}'
+                    input = f'-i "{self.cur_video}"'
+                    codec = '-c:v libx265' if self.use_h265 else '-c:v libx264'
+                    video_bitrate = f'-b:v {calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)}k'
+                    audio_bitrate = f'-c:a aac -b:a {self.audio_bitrate}k' if not self.remove_audio else '-an'
+                    fps = f'-r {self.fps}'
+                    resolution = f'-vf scale={self.res_w}:{self.res_h}'
+                    output = f'"{self.cur_video_path}{self.cur_video_name}-compressed{self.file_extension}"'
+                    cmd = f'{self.ffmpeg} -y {input} {codec} {video_bitrate} {fps} {resolution} -pass 1 -an -f mp4 TEMP && {self.ffmpeg} -y {input} {codec} {video_bitrate} {fps} {resolution} -pass 2 {audio_bitrate} {output}'
 
-        if not self.trimming: 
-            try:
-                self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-            except:
-                print('Something went wrong, try changing your settings.')
-                return
+                    self.process_started = True
+                    self.proc = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE)
 
-        self.trimming = True
-        print(f'Trimming {self.cur_video} from {self.trim_s} to {self.trim_e}, please wait...')
+                    print('Compression process started.')
+                else:
+                    stdout, stderr = await self.proc.communicate()
 
-    def compress(self) -> None:
-        if self.trimmed:
-            self.cur_video = self.cur_video_trimmed
-            print(f'Using trimmed version: {self.cur_video_trimmed}')
+                    if self.proc.returncode == 0:
+                        self.compressing = False
+                        self.trimmed = False
+                        self.process_started = False
+                        print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed.')
 
-        if not calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate):
-            self.abort()
-            return
+                        try:
+                            os.remove(self.cur_video_trimmed)
+                            print('Deleting trimmed copy.')
+                        except:
+                            pass
 
-        input = f'-i "{self.cur_video}"'
-        codec = '-c:v libx265' if self.use_h265 else '-c:v libx264'
-        video_bitrate = f'-b:v {calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)}k'
-        audio_bitrate = f'-c:a aac -b:a {self.audio_bitrate}k' if not self.remove_audio else '-an'
-        fps = f'-r {self.fps}'
-        resolution = f'-vf scale={self.res_w}:{self.res_h}'
-        output = f'"{self.cur_video_path}{self.cur_video_name}-compressed{self.file_extension}"'
-
-        cmd = f'{self.ffmpeg} -y {input} {codec} {video_bitrate} {fps} {resolution} -pass 1 -an -f mp4 TEMP && {self.ffmpeg} -y {input} {codec} {video_bitrate} {fps} {resolution} -pass 2 {audio_bitrate} {output}'
-        
-        if not self.compressing: 
-            try:
-                self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-            except:
-                print('Something went wrong, try changing your settings.')
-                return
-
-        self.compressing = True
-        print(f'Compressing video {self.cur_queue + 1}/{len(self.selected_videos)}, please wait...')
+                        if (self.cur_queue + 1 < len(self.selected_videos)):
+                            self.cur_queue += 1
+                            self.start()
+                        else:
+                            print('Job done!')
+                    else:
+                        self.compressing = False
+                        self.trimmed = False
+                        self.process_started = False
+                        self.cur_queue = 0
+                        print(f'Video {self.cur_queue + 1}/{len(self.selected_videos)} failed, aborting.')
+            
+            await asyncio.sleep(1)
 
     def get_video_data(self, video) -> None:
         self.cur_video = video
@@ -244,14 +249,14 @@ class App:
                 self.compressing = False
                 self.trimming = False
                 self.trimmed = False
+                self.process_started = False
 
                 print('Aborting.')
     
     def help(self) -> None:
         sg.popup("Resolution: Set your video's dimensions (width x height).\n\nTarget File Size: Set the targetted file size for your video.\n\nAudio Bitrate: Set your video's audio bitrate.\n\nFramerate: Set your video's fps.\n\nFile Extension: Set the file type of your video.\n\nTrim: The first box is your video's initial start time, the second box is the duration afterwards.\n\nEnable Trim: Must be enabled to trim your video.\n\nRemove Audio: Self explanitory.\n\nUse H.265 Codec: Set your video to use the H.265 codec for a higher quality output. If you plan on sharing your video on Discord then do NOT use this option, it will not embed.\n\nPortrait Mode: Flips the set width and height resolution to output verticle videos correctly. If you've already manually set the resolution to vertical dimensions then this option is ignored.")
 
-    def ui(self) -> None:
-        # sg.change_look_and_feel('DarkAmber1')
+    async def ui(self) -> None:
         self.window = sg.Window(f"{self.author}'s Video Compressor", self.layout, resizable=False, finalize=True, element_justification='center')
         self.window['col_left'].expand(True, True, True)
         self.window['col_right'].expand(True, True, True)
@@ -266,23 +271,25 @@ class App:
 
         while True:
             event, values, = self.window.read(timeout=1)
-            # print(event, values)
 
             if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
                 self.abort()
                 sys.exit()
 
-            if event == 'select_videos':
-                self.selected_videos = list_videos(values['select_videos'])
-
             if event == 'start':
-                self.apply_options(values)
-                self.start()
+                if not self.trimming and not self.compressing:
+                    self.selected_videos = list_videos(values['select_videos'])
+                    self.apply_options(values)
+                    self.start()
+                else:
+                    print('Compression already begun. Click Abort if you need to restart.')
             
             if event == 'abort':
                 self.abort()
             
             if event == 'help':
                 self.help()
+            
+            await asyncio.sleep(0.0001)
 
 app = App()
