@@ -1,10 +1,10 @@
 ## Colt's Video Compressor
 A multi-platform video compressor and converter, created in Python.
 
-## Why?
-I created this app to quickly compress videos to a specific file size in order to share them on Discord.
+### Why?
+I created this app to quickly compress videos to a specific file size (8MB) in order to share them on Discord.
 
-## Features
+### Features
 - Compress multiple video files in a queue system.
 - Compress videos to any file size.
 - Trim your videos.
@@ -15,5 +15,5 @@ I created this app to quickly compress videos to a specific file size in order t
 
 and more!
 
-## Preview
+### Preview
 ![Screenshot 1](https://github.com/colthub/video-compressor/raw/main/screenshot.png)
