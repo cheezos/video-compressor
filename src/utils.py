@@ -2,7 +2,7 @@
 # https://github.com/asickwav/video-compressor
 # Python 3.9.7 64-bit
 
-import platform, os, subprocess, fnmatch, shutil, requests, sys
+import platform, os, subprocess, fnmatch, shutil, requests
 
 ffmpeg_download_link = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 ffmpeg_download_path = "%s/downloads/ffmpeg-release-essentials.zip" % os.getcwd()
@@ -48,7 +48,8 @@ def install_ffmpeg() -> None:
             
         if os.path.isfile("%s/ffmpeg.exe" % ffmpeg_path):
             ffmpeg_installed = True
-            print("Found ffmpeg!")
+            print("Found FFmpeg.")
+            print("Click Help to check what each setting does.\nReady.")
         else:
             ffmpeg_is_downloading = True
             
@@ -63,12 +64,11 @@ def install_ffmpeg() -> None:
                     dl = 0
                     total_length = int(total_length)
                     
-                    for data in response.iter_content(chunk_size=4096):
+                    for data in response.iter_content(chunk_size=1024):
                         dl += len(data)
                         f.write(data)
                         progress_percent = (dl / total_length) * 100
-                        print("Downloading FFmpeg: %s\n" % progress_percent)
-                        sys.stdout.flush()
+                        print("Downloading FFmpeg: %s/%s (%s)" % (round(dl), round(total_length), round(progress_percent)))
                     
             ffmpeg_downloaded = True
             ffmpeg_is_downloading = False
@@ -104,6 +104,7 @@ def move_files() -> None:
 
         ffmpeg_installed = True
         print("Moved files.")
+        print("Click Help to check what each setting does.\nReady.")
 
 def get_files() -> None:
     for path, dirlist, filelist in os.walk(os.getcwd() + "/ffmpeg"):

@@ -60,7 +60,6 @@ class Main:
         self.cur_queue = 0
         self.cur_pass = 1
         self.proc = ""
-        self.ffmpeg_is_valid = False
         self.ffmpeg_path = Utils.get_ffmpeg_path()
         
         self.layout = [
@@ -78,11 +77,11 @@ class Main:
             [sg.Text("")],
             [sg.Input("", size=(40, 1), key="select_videos", change_submits=True), sg.FilesBrowse("Select Videos", size=(10, 1))],
             [sg.Output(size=(60, 10), key="output", echo_stdout_stderr=True)],
-            [sg.Button("Start", key="start", size=(8, 1)), sg.Button("Abort", key="abort", size=(8, 1)), sg.Button("Help", key="help", size=(8, 1)), sg.Button("Github", key="github", size=(8, 1))],
+            [sg.Button("Start", key="start", size=(8, 1)), sg.Button("Abort", key="abort", size=(8, 1)), sg.Button("Help", key="help", size=(8, 1))],
             [sg.Text("")],
             [sg.HorizontalSeparator(pad=None)],
             [sg.Text("This app is free and open-source!", font=self.font_tiny)],
-            [sg.Button("Support me on Ko-fi", key="support")],
+            [sg.Button("Buy me a coffee", key="support", size=(15, 1)), sg.Button("Github", key="github", size=(15, 1))],
         ]
         
         self.main()
@@ -93,7 +92,7 @@ class Main:
             self.selected_videos = Utils.list_videos(values["select_videos"])
             
             if len(self.selected_videos) > 0:
-                if not self.ffmpeg_is_valid:
+                if not Utils.ffmpeg_installed:
                     print("Please wait for FFmpeg to finish installing.")
                 else:
                     if self.enable_trim and not self.trimmed:
@@ -105,7 +104,7 @@ class Main:
             else:
                 print('No videos selected!')
             
-            if not self.ffmpeg_is_valid:
+            if not Utils.ffmpeg_installed:
                 print("Please wait for FFmpeg to finish installing.")
         else:
             print("Compression started, click Abort to stop.")
@@ -117,7 +116,7 @@ class Main:
             \n\nAudio Bitrate: Set the audio bitrate for your video(s) in Kbps.
             \n\nFramerate: Set the fps for your video(s).
             \n\nFile Extension: Set the file type of your video(s).
-            \n\nTrim: The first box is the time where your video will start, the second box is how long your video will be. (This is just how FFmpeg handles trimming, I hate it too.)
+            \n\nTrim: The first box is the time where your video(s) will start, the second box is how long your video(s) will be. (This is just how FFmpeg handles trimming, I hate it too.)
             \n\nEnable Trim: Must be enabled to trim your video(s).
             \n\nRemove Audio: Self explanitory.
             \n\nUse H.265 Codec: Set your video(s) to use the H.265 codec for a higher visual quality. If you plan on sharing your video on Discord then do NOT use this option, it will not embed.
@@ -271,7 +270,7 @@ class Main:
                 self.abort()
     
     def main(self) -> None:
-        self.window = sg.Window("%s Video Compressor" % self.author, self.layout, element_justification="center")
+        self.window = sg.Window("%s Video Compressor %s" % (self.author, self.version), self.layout, element_justification="center")
         
         while True:
             event, values = self.window.read(timeout=1)
@@ -292,10 +291,15 @@ class Main:
             if event == "github":
                 webbrowser.open("https://github.com/asickwav/video-compressor")
             
-            if not self.ffmpeg_is_valid:
+            if event == "support":
+                webbrowser.open("https://ko-fi.com/V7V82NKB5")
+            
+            if not Utils.ffmpeg_installed:
                 if not Utils.ffmpeg_is_downloading:
                     x = threading.Thread(target=Utils.install_ffmpeg)
                     x.start()
+                    
+                self.window.Read()
         
 
 if __name__ == "__main__":
