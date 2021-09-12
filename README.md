@@ -1,8 +1,5 @@
-## Colt's Video Compressor
+## Asick Video Compressor
 A multi-platform video compressor and converter, created in Python.
-
-### Why?
-I created this app to quickly compress videos to a specific file size in order to share them on Discord.
 
 ### Features
 - Compress multiple video files in a queue system.
@@ -12,11 +9,9 @@ I created this app to quickly compress videos to a specific file size in order t
 - Convert to different file types.
 - Convert to different framerates.
 - Remove audio from videos.
+- Automatically downloads and installs ffmpeg.
 
 and more!
 
-### Issues
-- App temporarily freezes while downloading FFmpeg files on Windows.
-
-### Preview
-![Screenshot 1](https://github.com/colthub/video-compressor/raw/main/screenshot.png)
+### Love this app?
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/V7V82NKB5)
