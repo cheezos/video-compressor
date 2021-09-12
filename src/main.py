@@ -2,7 +2,7 @@
 # https://github.com/asickwav/video-compressor
 # Python 3.9.7 64-bit
 
-import platform, os, subprocess, psutil, webbrowser, threading
+import platform, os, subprocess, psutil, webbrowser, threading, sys
 import PySimpleGUI as sg
 import utils as Utils
 
@@ -277,7 +277,7 @@ class Main:
 
             if event in (sg.WIN_CLOSED, "Exit", "Cancel"):
                 self.abort()
-                quit()
+                sys.exit()
 
             if event == "start":
                 self.start(values)
