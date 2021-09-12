@@ -124,3 +124,5 @@ FFmpeg/ffmpeg.exe
 FFmpeg/ffplay.exe
 FFmpeg/ffprobe.exe
 src/ffmpeg-release-essentials.zip
+src/video-compressor-old.py
+src/utils-old.py
