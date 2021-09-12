@@ -13,5 +13,8 @@ A multi-platform video compressor and converter, created in Python.
 
 and more!
 
+### Preview
+![Screenshot 1](https://github.com/asickwav/video-compressor/raw/main/screenshot.png)
+
 ### Love this app?
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/V7V82NKB5)
