@@ -1,108 +1,90 @@
-from datetime import datetime
+import platform, os, subprocess, fnmatch, shutil, requests, sys, zipfile, time
 
-import platform
-import os
-import subprocess
-import dload
-import fnmatch
-import shutil
-
-def pretty_time() -> str:
-    return datetime.now().strftime("%H:%M:%S")
-
-def raw_time() -> float:
-    return datetime.now()
-
-def list_videos(str) -> list:
-    vids_old = str.split(';')
-    vids_new = []
-
-    for vid in vids_old:
-        name = get_name(vid)
-        extension = get_extension(vid)
-        path = vid.split(name)[0]
-        vid_name_no_spaces = name.replace(' ', '-')
-        new_vid = path + vid_name_no_spaces + extension
-        os.rename(vid, new_vid)
-        vids_new.append(new_vid)
-
-    print('Renamed videos with spaces.')
-    print(f'Selected {len(vids_new)} video(s).')
-    return vids_new
-
-def get_ffmpeg() -> str:
-    ffmpeg = 'ffmpeg' if platform.system() == 'Linux' else os.getcwd() + '/FFmpeg/ffmpeg.exe'
-    return ffmpeg
-
-def get_ffprobe() -> str:
-    ffprobe = 'ffprobe' if platform.system() == 'Linux' else os.getcwd() + '/FFmpeg/ffprobe.exe'
-    return ffprobe
+ffmpeg_download_link = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+ffmpeg_download_path = "%s/downloads/ffmpeg-release-essentials.zip" % os.getcwd()
+ffmpeg_path = "%s/ffmpeg" % os.getcwd()
+ffmpeg_downloaded = False
+ffmpeg_installed = False
 
 def validate_ffmpeg() -> bool:
-    if not platform.system() == 'Windows':
-        p = subprocess.Popen('which ffmpeg', stdout=subprocess.PIPE, shell=True)
+    global ffmpeg_installed
+    
+    if not platform.system() == "Windows":
+        p = subprocess.Popen("which ffmpeg", stdout=subprocess.PIPE, shell=True)
         result = p.stdout.readline()
-        if result: return True
+        
+        if result:
+            ffmpeg_installed = True
+            print("FFmpeg validated!")
+            return True
     else:
-        if os.path.exists(os.getcwd() + '/FFmpeg/ffmpeg.exe') and os.path.exists(os.getcwd() + '/FFmpeg/ffprobe.exe'):
+        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
+            ffmpeg_installed = True
+            print("FFmpeg validated!")
             return True
 
     print("Couldn't locate FFmpeg.")
     return False
 
 def install_ffmpeg() -> None:
-        if platform.system() == 'Windows':
-            if not os.path.exists(os.getcwd() + '/FFmpeg'):
-                os.mkdir(os.getcwd() + '/FFmpeg')
-                print('FFmpeg directory created.')
+    global ffmpeg_installed
+    global ffmpeg_downloaded
+    
+    if platform.system() == "Windows":
+        if not os.path.exists("%s/ffmpeg" % os.getcwd()):
+            os.mkdir("%s/ffmpeg" % os.getcwd())
+            print("FFmpeg directory created.")
+        
+        if not os.path.exists("%s/downloads" % os.getcwd()):
+            os.mkdir("%s/downloads" % os.getcwd())
+            print("Downloads directory created.")
             
-            print('Downloading FFmpeg, please wait...')
-            dload.save_unzip('https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip', os.getcwd() + '/FFmpeg')
-            print('FFmpeg downloaded.')
+        if os.path.isfile("%s/ffmpeg.exe" % ffmpeg_path):
+            ffmpeg_installed = True
+            print("Found ffmpeg!")
+        else:            
+            with open(ffmpeg_download_path, "wb") as f:
+                print("Downloading ffmpeg to %s" % ffmpeg_download_path)
+                print("Please wait...")
+                response = requests.get(ffmpeg_download_link, stream=True)
+                total_length = response.headers.get('content-length')
 
-            files = get_files()
+                if total_length is None:
+                    f.write(response.content)
+                else:
+                    dl = 0
+                    total_length = int(total_length)
+                    
+                    for data in response.iter_content(chunk_size=4096):
+                        dl += len(data)
+                        f.write(data)
+                        done = int(50 * dl / total_length)
+                        sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50-done)) )    
+                        sys.stdout.flush()
+                    
+            ffmpeg_downloaded = True
+            print("\n")
+            unzip_ffmpeg()
 
-            if files:
-                for name in files:
-                    shutil.move(name, os.getcwd() + '/FFmpeg')
+def unzip_ffmpeg() -> None:
+    print("Unzipping ffmpeg contents...")    
+    shutil.unpack_archive(ffmpeg_download_path, ffmpeg_path)
+    print("Unzipped ffmpeg contents.")
+    move_files()
 
-                print('Moved contents to FFmpeg directory.')
-            
+def move_files() -> None:
+    global ffmpeg_installed
+    files = get_files()
+    print("Moving files...")
+
+    if files:
+        for name in files:
+            shutil.move(name, "%s/ffmpeg" % os.getcwd())
+
+        ffmpeg_installed = True
+        print("Moved files.")
+
 def get_files() -> None:
-    for path, dirlist, filelist in os.walk(os.getcwd() + '/FFmpeg'):
-        for name in fnmatch.filter(filelist, '*.exe'):
+    for path, dirlist, filelist in os.walk(os.getcwd() + "/ffmpeg"):
+        for name in fnmatch.filter(filelist, "*.exe"):
             yield os.path.join(path, name)
-
-def get_video_duration(video) -> float:
-    try:
-        proc = subprocess.Popen(f'{get_ffprobe()} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "{video}"', stdout=subprocess.PIPE, shell=True)
-        return float(proc.stdout.readline())
-    except:
-        print('Invalid trim settings, check your video length.')
-        return None
-
-def calculate_video_bitrate(video, target_file_size, audio_bitrate) -> float:
-    video_duration = get_video_duration(video)
-
-    if video_duration:
-        magic = ((target_file_size * 8192.0) / (1.048576 * video_duration) - audio_bitrate)
-        return magic
-    else:
-        return None
-
-def get_name(video) -> str:
-    name_with_extension = os.path.basename(video)
-    split = name_with_extension.split('.')
-    just_name = name_with_extension.replace('.' + split[-1], '')
-    return just_name
-
-def get_extension(video) -> str:
-    name_with_extension = os.path.basename(video)
-    split = name_with_extension.split('.')
-    just_extension = '.' + split[-1]
-    return just_extension
-
-def get_path(video) -> str:
-    name_with_extension = os.path.basename(video)
-    just_path = video.replace(name_with_extension, '')
-    return just_path
