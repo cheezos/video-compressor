@@ -14,8 +14,6 @@ class Worker(QObject):
         self.target_file_size: float = float(file_size)
         self.remove_audio: bool = bool(remove_audio)
         self.audio_bitrate = 128
-        self.fps = 30
-        self.file_extension = "mp4"
         
         self.compressing: bool = False
         self.selected_videos: list = videos
@@ -76,27 +74,25 @@ class Worker(QObject):
             self.cur_video = self.selected_videos[self.cur_queue]
             
             input = '"%s"' % self.cur_video
-            codec = "libx264"
             video_bitrate = self.calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)
             audio_bitrate = "-b:a %sk" % self.audio_bitrate if not self.remove_audio else "-an"
-            fps = "%s" % self.fps
-            output = '"%s%s-compressed%s"' % (self.get_video_path(self.cur_video), self.get_video_name(self.cur_video), self.file_extension)
+            output = '"%s%s-compressed.mp4"' % (self.get_video_path(self.cur_video), self.get_video_name(self.cur_video))
             
-            pass_1 = "%s -i %s -y -c:v %s -b:v %sk -r %s -pass 1 -an -f mp4 TEMP" % (
-                self.ffmpeg_path, input, codec, video_bitrate, fps
+            pass_1 = "%s -i %s -y -c:v libx264 -b:v %sk -pass 1 -an -f mp4 TEMP" % (
+                self.get_ffmpeg_path(), input, video_bitrate
             )
             
-            pass_2 = "%s -y -i %s -y -c:v %s -b:v %sk -r %s -pass 2 -c:a aac %s %s" % (
-                self.ffmpeg_path, input, codec, video_bitrate, fps, audio_bitrate, output
+            pass_2 = "%s -y -i %s -y -c:v libx264 -b:v %sk -pass 2 -c:a aac %s %s" % (
+                self.get_ffmpeg_path(), input, video_bitrate, audio_bitrate, output
             )
-            
+                        
             if self.cur_pass == 1:
-                self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE)
+                self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE, shell=False)
             else:
-                self.proc = subprocess.Popen(pass_2, stdout=subprocess.PIPE)
+                self.proc = subprocess.Popen(pass_2, stdout=subprocess.PIPE, shell=False)
                 
             self.compressing = True
-            self.signal_message.emit("Compressing video %s/%s, Pass %s/2..." % (self.cur_queue + 1, len(self.selected_videos), self.cur_pass), True)
+            self.signal_message.emit("Compressing video %s/%s, Pass %s/2..." % (self.cur_queue + 1, len(self.selected_videos), self.cur_pass), False)
         
         while self.compressing:
             stdout, stderr = self.proc.communicate()
@@ -115,17 +111,26 @@ class Worker(QObject):
                         self.cur_queue += 1
                         self.compress()
                     else:
-                        self.signal_message.emit('Job done!', True)
+                        self.signal_message.emit('Job done!', False)
+                        self.signal_finished.emit()
             else:
                 self.compressing = False
-                self.signal_message.emit("Compression failed, aborting...", False)
-                self.abort()
+                self.signal_message.emit("Compression aborted!", False)
+                self.signal_finished.emit()
     
     def calculate_video_bitrate(self, video, target_file_size, audio_bitrate) -> float:
         video_duration = self.get_video_duration(video)
 
         if video_duration:
-            magic = round(((target_file_size * 8192.0) / (1.048576 * video_duration) - audio_bitrate))
+            magic = max(64.0, round(((target_file_size * 8192.0) / (1.048576 * video_duration) - audio_bitrate)))
+            
+            if magic <= 64:
+                self.signal_message.emit(
+                    "Calculated bitrate is extremely low! This is due to your target file size and the length of the video.", False)
+                
+                self.signal_message.emit(
+                    "Try increasing your target file size or compress shorter videos.", False)
+            
             return magic
         else:
             return None

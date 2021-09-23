@@ -198,6 +198,7 @@ class Main(QWidget):
 
                 self.compressing = False
         
+        self.thread_finished()
         self.cleanup()
         self.print_console("Aborted.")
 
@@ -210,9 +211,11 @@ class Main(QWidget):
     def cleanup(self) -> None:
         try:
             os.remove("TEMP")
+            os.remove("ffmpeg2pass-0.log")
+            os.remove("ffmpeg2pass-0.log.mbtree")
             self.print_console("Cleaned up temp files.")
         except:
-            self.print_console("No files to clean.")
+            pass
 
     def print_console(self, message, overwrite_all=False) -> None:
         if overwrite_all:
@@ -223,9 +226,13 @@ class Main(QWidget):
         self.output.moveCursor(QTextCursor.End)
     
     def thread_finished(self) -> None:
-        self.thread.quit()
-        time.sleep(1)
-        self.thread = None
+        if self.thread != None:
+            self.thread.quit()
+            time.sleep(1)
+            self.thread = None
+            
+        self.compressing = False
+        self.cleanup()
         self.validate_ffmpeg()
 
     def validate_ffmpeg(self) -> bool:  
