@@ -1,3 +1,7 @@
+# Created by asick
+# https://github.com/asickwav/video-compressor
+# Python 3.9.7 64-bit
+
 from PyQt5.QtCore import QObject, pyqtSignal
 import os, requests, shutil, fnmatch, subprocess
 
@@ -126,10 +130,10 @@ class Worker(QObject):
             
             if magic <= 64:
                 self.signal_message.emit(
-                    "Calculated bitrate is extremely low! This is due to your target file size and the length of the video.", False)
+                    "\n[WARNING] Calculated bitrate is extremely low! This is due to your target file size and the length of the video.", False)
                 
                 self.signal_message.emit(
-                    "Try increasing your target file size or compress shorter videos.", False)
+                    "Try increasing your target file size or compress shorter videos.\n", False)
             
             return magic
         else:

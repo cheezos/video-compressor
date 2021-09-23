@@ -2,7 +2,7 @@
 # https://github.com/asickwav/video-compressor
 # Python 3.9.7 64-bit
 
-from PyQt5.QtCore import Qt, QThread
+from PyQt5.QtCore import QThread, Qt
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QPushButton, QLabel, QLineEdit, QCheckBox, QTextEdit
 from PyQt5.QtGui import QFont, QTextCursor
 import os, psutil, webbrowser, time
