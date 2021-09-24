@@ -2,305 +2,325 @@
 # https://github.com/asickwav/video-compressor
 # Python 3.9.7 64-bit
 
-import platform, os, subprocess, psutil, webbrowser, threading, sys
-import PySimpleGUI as sg
-import utils as Utils
+from PyQt5.QtCore import QThread, Qt
+from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QLineEdit, QCheckBox, QTextEdit, QMainWindow
+from PyQt5.QtGui import QFont, QTextCursor, QIcon
+from configparser import ConfigParser
+import os, psutil, webbrowser, time, json
+from worker import Worker
 
-sg.LOOK_AND_FEEL_TABLE["swag"] = {
-    'BACKGROUND': 'white',
-    'TEXT': 'black',
-    'INPUT': 'white',
-    'TEXT_INPUT': '#000000',
-    'SCROLL': 'white',
-    'BUTTON': ('white', '#2b3340'),
-    'PROGRESS': ('#01826B', '#D0D0D0'),
-    'BORDER': 1,
-    'SLIDER_DEPTH': 0,
-    'PROGRESS_DEPTH': 0
-}
+class Main(QMainWindow):
+    def __init__(self, parent=None) -> None:
+        super(Main, self).__init__(parent)
 
-sg.theme("swag")
+        # App info
+        self.version: str = "v1.2.0"
+        self.title: str = "Asick Video Compressor %s" % self.version
+        self.author: str = "Asick"
 
-class Main:
-    def __init__(self) -> None:
-        self.version = "v1.1.0"
-        self.author = "Asick"
-        self.github = "github.com/asickwav/video-compressor"
-        self.os = platform.system()
-        
+        # FFmpeg
+        self.ffmpeg_path: str = "%s/ffmpeg" % os.getcwd()
+        self.ffmpeg_installed: bool = False
+
+        # Video Options
+        self.config: ConfigParser = ConfigParser()
+        self.selected_videos: list = []
+        self.target_file_size: float = 20.0
+        self.remove_audio: bool = False
+
+        # UI
+        self.width: int = 400
+        self.height: int = 430
+
+        # Title
+        self.label_title: QLabel = QLabel("%s Video Compressor %s" % (self.author, self.version), self)
+        self.label_title.setFont(QFont("Arial", 12))
+        self.label_title.setFixedWidth(self.width)
+        self.label_title.setFixedHeight(30)
+        self.label_title.move(0, 10)
+        self.label_title.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+
+        self.label_select_videos: QLabel = QLabel("github.com/asickwav/video-compressor", self) 
+        self.label_select_videos.setFont(QFont("Arial", 8))
+        self.label_select_videos.setFixedWidth(self.width)
+        self.label_select_videos.setFixedHeight(30)
+        self.label_select_videos.move(0, 40)
+        self.label_select_videos.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+
+        # Select Videos
+        self.button_select_videos: QPushButton = QPushButton("Browse", self)
+        self.button_select_videos.setFont(QFont("Arial", 10))
+        self.button_select_videos.setFixedWidth(round(self.width * 0.33 - 5))
+        self.button_select_videos.setFixedHeight(30)
+        self.button_select_videos.setToolTip("Select videos to compress.")
+        self.button_select_videos.move(10, 90)
+        self.button_select_videos.clicked.connect(self.select_videos)
+
+        self.ledit_video_list: QLineEdit = QLineEdit(self)
+        self.ledit_video_list.setFixedWidth(round(self.width * 0.66 - 15))
+        self.ledit_video_list.setFixedHeight(30)
+        self.ledit_video_list.setPlaceholderText("Browse and select videos to compress.")
+        self.ledit_video_list.move(round(self.width * 0.33 + 10), 90)
+
+        # Target File Size
+        self.label_file_size: QLabel = QLabel("Target File Size", self)
+        self.label_file_size.setFont(QFont("Arial", 10))
+        self.label_file_size.setFixedWidth(round(self.width * 0.33 - 5))
+        self.label_file_size.setFixedHeight(30)
+        self.label_file_size.setToolTip("Set the file size to compress your videos to in megabytes.")
+        self.label_file_size.move(10, 130)
+        self.label_file_size.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+
+        self.ledit_file_size: QLineEdit = QLineEdit(self)
+        self.ledit_file_size.setFixedWidth(50)
+        self.ledit_file_size.setFixedHeight(30)
+        self.ledit_file_size.setText("8")
+        self.ledit_file_size.move(round(self.width * 0.33 + 10), 130)
+
+        self.label_mb: QLabel = QLabel("MB", self)
+        self.label_mb.setFont(QFont("Arial", 10))
+        self.label_mb.setFixedWidth(50)
+        self.label_mb.setFixedHeight(30)
+        self.label_mb.setToolTip("Set the file size to compress your videos to in megabytes.")
+        self.label_mb.move(round(self.width * 0.33 + 70), 130)
+
+        # Remove Audio
+        self.label_remove_audio: QLabel = QLabel("Remove Audio", self)
+        self.label_remove_audio.setFont(QFont("Arial", 10))
+        self.label_remove_audio.setFixedWidth(round(self.width * 0.33 - 5))
+        self.label_remove_audio.setFixedHeight(30)
+        self.label_remove_audio.setToolTip("Remove audio from your videos.")
+        self.label_remove_audio.move(10, 170)
+        self.label_remove_audio.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+
+        self.cb_remove_audio: QCheckBox = QCheckBox(self)
+        self.cb_remove_audio.setFixedWidth(50)
+        self.cb_remove_audio.setFixedHeight(30)
+        self.cb_remove_audio.move(round(self.width * 0.33 + 10), 170)
+
+        # Output
+        self.output: QTextEdit = QTextEdit(self)
+        self.output.setFixedWidth(self.width - 20)
+        self.output.setFixedHeight(170)
+        self.output.move(10, 210)
+
+        # Buttons
+        self.button_select_videos: QPushButton = QPushButton("Compress", self)
+        self.button_select_videos.setFont(QFont("Arial", 10))
+        self.button_select_videos.setFixedWidth(round(self.width * 0.25))
+        self.button_select_videos.setFixedHeight(30)
+        self.button_select_videos.setToolTip("Compress the selected videos.")
+        self.button_select_videos.move(0, self.height - 40)
+        self.button_select_videos.clicked.connect(self.start)
+
+        self.button_abort: QPushButton = QPushButton("Abort", self)
+        self.button_abort.setFont(QFont("Arial", 10))
+        self.button_abort.setFixedWidth(round(self.width * 0.25))
+        self.button_abort.setFixedHeight(30)
+        self.button_abort.setToolTip("Abort the compression process.")
+        self.button_abort.move(round(self.width * 0.25), self.height - 40)
+        self.button_abort.clicked.connect(self.abort)
+
+        self.button_support: QPushButton = QPushButton("Support Me", self)
+        self.button_support.setFont(QFont("Arial", 10))
+        self.button_support.setFixedWidth(round(self.width * 0.25))
+        self.button_support.setFixedHeight(30)
+        self.button_support.setToolTip("Open Ko-Fi page.")
+        self.button_support.move(round(self.width * 0.25) * 2, self.height - 40)
+        self.button_support.clicked.connect(self.support)
+
+        self.button_github: QPushButton = QPushButton("Github", self)
+        self.button_github.setFont(QFont("Arial", 10))
+        self.button_github.setFixedWidth(round(self.width * 0.25))
+        self.button_github.setFixedHeight(30)
+        self.button_github.setToolTip("Open Github page.")
+        self.button_github.move(round(self.width * 0.25) * 3, self.height - 40)
+        self.button_github.clicked.connect(self.support)
+
         # States
-        self.compressing = False
-        self.trimming = False
-        self.trimmed = False
-        
-        # UI Preferences
-        self.font_large = "Arial 16 bold"
-        self.font_small = "Arial 12"
-        self.font_tiny = "Arial 10"
+        self.compressing: bool = False
 
-        # Options
-        self.res_w = 1280
-        self.res_h = 720
-        self.target_file_size = 8
-        self.audio_bitrate = 128
-        self.fps = 30
-        self.file_extension = "mp4"
-        self.trim_s = "00:00:45"
-        self.trim_e = "00:00:15"
-        self.enable_trim = False
-        self.remove_audio = False
-        self.use_h265 = False
-        self.portrait_mode = False
-
-        self.selected_videos = []
-        self.cur_video = ""
-        self.cur_video_name = ""
-        self.cur_video_path = ""
-        self.cur_video_extension = ""
-        self.cur_queue = 0
-        self.cur_pass = 1
-        self.proc = ""
-        self.ffmpeg_path = Utils.get_ffmpeg_path()
+        # Internal
+        self.thread: QThread
+        self.worker: Worker
         
-        self.layout = [
-            [sg.Text("%s Video Compressor %s" % (self.author, self.version), font=self.font_large)],
-            [sg.Text("Resolution", font=self.font_small), sg.Input(self.res_w, font=self.font_tiny, key="res_w", size=(7, 1)), sg.Input(self.res_h, key="res_h", font=self.font_tiny, size=(7, 1))],
-            [sg.Text("Target File Size", font=self.font_small), sg.Input(self.target_file_size, font=self.font_tiny, key="file_size", size=(7, 1)), sg.Text("MB")],
-            [sg.Text("Audio Bitrate", font=self.font_small), sg.Input(self.audio_bitrate, font=self.font_tiny, key="audio_bitrate", size=(7, 1)), sg.Text("Kbps")],
-            [sg.Text("Framerate", font=self.font_small), sg.Input(self.fps, font=self.font_tiny, key="framerate", size=(7, 1)), sg.Text("FPS")],
-            [sg.Text("File Extension", font=self.font_small), sg.Input(self.file_extension, font=self.font_tiny, key="extension", size=(7, 1))],
-            [sg.Text("Trim (hh:mm:ss)", font=self.font_small), sg.Input(self.trim_s, font=self.font_tiny, key="trim_start", size=(7, 1)), sg.Input(self.trim_e, font=self.font_tiny, key="trim_end", size=(7, 1))],
-            [sg.Text("Enable Trim", font=self.font_small), sg.Checkbox("", font=self.font_tiny, default=False, key="trim", change_submits=True)],
-            [sg.Text("Remove Audio", font=self.font_small), sg.Checkbox("", font=self.font_tiny, default=False, key="mute", change_submits=True)],
-            [sg.Text("Use H.265 Codec", font=self.font_small), sg.Checkbox("", font=self.font_tiny, default=False, key="h265", change_submits=True)],
-            [sg.Text("Portrait Mode", font=self.font_small), sg.Checkbox("", font=self.font_tiny, default=False, key="portrait", change_submits=True)],
-            [sg.Text("")],
-            [sg.Input("", size=(40, 1), key="select_videos", change_submits=True), sg.FilesBrowse("Select Videos", size=(10, 1))],
-            [sg.Output(size=(60, 10), key="output", echo_stdout_stderr=True)],
-            [sg.Button("Start", key="start", size=(8, 1)), sg.Button("Abort", key="abort", size=(8, 1)), sg.Button("Help", key="help", size=(8, 1))],
-            [sg.Text("")],
-            [sg.HorizontalSeparator(pad=None)],
-            [sg.Text("This app is free and open-source!", font=self.font_tiny)],
-            [sg.Button("Buy me a coffee", key="support", size=(15, 1)), sg.Button("Github", key="github", size=(15, 1))],
-        ]
-        
-        self.main()
-        
-    def start(self, values) -> None:
-        if not self.compressing and not self.trimming:
-            self.apply_options(values)
-            self.selected_videos = Utils.list_videos(values["select_videos"])
-            
-            if len(self.selected_videos) > 0:
-                if not Utils.ffmpeg_installed:
-                    print("Please wait for FFmpeg to finish installing.")
-                else:
-                    if self.enable_trim and not self.trimmed:
-                        x = threading.Thread(target=self.trim)
-                        x.start()
-                    else:
-                        x = threading.Thread(target=self.compress)
-                        x.start()
-            else:
-                print('No videos selected!')
-            
-            if not Utils.ffmpeg_installed:
-                print("Please wait for FFmpeg to finish installing.")
+        # Init
+        self.init_UI()
+        self.init_config()
+        self.init_ffmpeg()
+    
+    def print_console(self, message, overwrite_all=False) -> None:
+        if overwrite_all:
+            self.output.setText("%s\n" % message)
         else:
-            print("Compression started, click Abort to stop.")
+            self.output.setText(self.output.toPlainText() + "%s\n" % message)
+            
+        self.output.moveCursor(QTextCursor.End)
+        print(message)
     
-    def help(self) -> None:
-        sg.popup(
-            """Resolution: Set your video's dimensions (width x height).
-            \n\nTarget File Size: Set the desired file size for your video(s) in MB.
-            \n\nAudio Bitrate: Set the audio bitrate for your video(s) in Kbps.
-            \n\nFramerate: Set the fps for your video(s).
-            \n\nFile Extension: Set the file type of your video(s).
-            \n\nTrim: The first box is the time where your video(s) will start, the second box is how long your video(s) will be. (This is just how FFmpeg handles trimming, I hate it too.)
-            \n\nEnable Trim: Must be enabled to trim your video(s).
-            \n\nRemove Audio: Self explanitory.
-            \n\nUse H.265 Codec: Set your video(s) to use the H.265 codec for a higher visual quality. If you plan on sharing your video on Discord then do NOT use this option, it will not embed.
-            \n\nPortrait Mode: Flips the set width and height resolution to output verticle videos correctly. If you've already manually set the resolution to vertical dimensions then this option is ignored.
-        """)
+    def init_config(self) -> None:
+        self.config.read(os.getcwd() + "/config.ini")
+        
+        if os.path.exists(os.getcwd() + "/config.ini"):
+            video_list = self.config.get("Options", "last_video_list").split(",")
+            
+            if video_list[0] == "":
+                self.selected_videos.clear()
+            else:
+                self.selected_videos = self.config.get("Options", "last_video_list").split(",")
+                self.ledit_video_list.setText(str(self.selected_videos))
+                
+            self.target_file_size = self.config.getfloat("Options", "target_file_Size")
+            self.remove_audio = self.config.getboolean("Options", "remove_audio")
+            
+            self.ledit_file_size.setText(str(self.target_file_size))
+            self.cb_remove_audio.setChecked(self.remove_audio)
+            
+            self.print_console("Loaded config.")
+        else:
+            self.config.add_section("Options")
+            self.config.set("Options", "last_video_list", self.list_to_string(self.selected_videos))
+            self.config.set("Options", "target_file_size", str(self.target_file_size))
+            self.config.set("Options", "remove_audio", str(self.remove_audio))
+            
+            with open(os.getcwd() + "/config.ini", "w") as config:
+                self.config.write(config)
+
+            config.close()
+            self.init_config()
     
+    def list_to_string(self, list_to_parse) -> str:
+        s = ""
+        index = 1
+        
+        for e in list_to_parse:
+            if index != len(list_to_parse):
+                s += "%s," % e
+            else:
+                s += "%s" % e
+            
+            index += 1
+            
+        return s    
+    
+    def save_config(self) -> None:
+        self.target_file_size = self.ledit_file_size.text()
+        self.remove_audio = self.cb_remove_audio.isChecked()
+                
+        self.config.set("Options", "last_video_list", self.list_to_string(self.selected_videos))
+        self.config.set("Options", "target_file_size", str(self.target_file_size))
+        self.config.set("Options", "remove_audio", str(self.remove_audio))
+        
+        with open(os.getcwd() + "/config.ini", "w") as config:
+            self.config.write(config)
+
+        config.close()
+        self.print_console("Config saved.")
+
+    def init_UI(self) -> None:
+        screen = QApplication.primaryScreen()
+        w = screen.size().width()
+        h = screen.size().height()
+        pos_x = round((w / 2) - (self.width / 2))
+        pos_y = round((h / 2) - (self.height / 2))
+
+        self.setWindowTitle(self.title)
+        self.setGeometry(pos_x, pos_y, self.width, self.height)
+        self.setMinimumSize(self.width, self.height)
+        self.setMaximumSize(self.width, self.height)
+        self.show()
+    
+    def init_ffmpeg(self) -> bool:  
+        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
+            self.ffmpeg_installed = True
+            return True
+        
+        self.thread = QThread()
+        self.worker = Worker()
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.install_ffmpeg)
+        self.worker.signal_message.connect(self.print_console)
+        self.worker.signal_finished.connect(self.thread_finished)
+        self.thread.start()
+        
+        return False
+    
+    def select_videos(self) -> None:
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        self.selected_videos, _ = QFileDialog.getOpenFileNames(self, "QFileDialog.getOpenFileNames()", "", "All Files (*);;Python Files (*.py)", options=options)
+        self.ledit_video_list.setText(str(self.selected_videos))
+
+    def start(self) -> None:
+        if not self.compressing:
+            if len(self.selected_videos) > 0:
+                if not self.ffmpeg_installed:
+                    self.print_console("Please wait for FFmpeg to finish installing.")
+                else:
+                    self.target_file_size = self.ledit_file_size.text()
+                    self.remove_audio = self.cb_remove_audio.isChecked()
+                    
+                    self.thread = QThread()
+                    self.worker = Worker(self.selected_videos, self.target_file_size, self.remove_audio)
+                    self.worker.moveToThread(self.thread)
+                    self.thread.started.connect(self.worker.compress)
+                    self.worker.signal_message.connect(self.print_console)
+                    self.worker.signal_finished.connect(self.thread_finished)
+                    self.thread.start()
+                    
+                    self.compressing = True
+            else:
+                self.print_console('No videos selected!')
+        else:
+            self.print_console("Compression started, click Abort to stop.")
+
     def abort(self) -> None:
+        if not self.compressing: return
+        
         for proc in psutil.process_iter():
             if "ffmpeg" in proc.name():
                 p = psutil.Process(proc.pid)
                 p.kill()
 
                 self.compressing = False
-                self.trimming = False
-                self.trimmed = False
-                self.process_started = False
         
+        self.thread_finished()
         self.cleanup()
-        print("Aborted.")
-    
-    def apply_options(self, values) -> None:
-        self.res_w = int(values["res_w"])
-        self.res_h = int(values["res_h"])
-        print("Set resolution to %sx%s." % (self.res_w, self.res_h))
-        
-        self.target_file_size = int(values["file_size"])
-        print("Set target file size to %sMB." % self.target_file_size)
-        
-        self.audio_bitrate = int(values["audio_bitrate"])
-        print("Set audio bitrate to %sk." % self.audio_bitrate)
-        
-        self.fps = int(values["framerate"])
-        print("Set framerate to %s FPS." % self.fps)
-        
-        self.file_extension = "." + values["extension"]
-        print("Set file extension to %s." % self.file_extension)
-        
-        self.trim_s = values["trim_start"]
-        self.trim_e = values["trim_end"]
-        self.enable_trim = values["trim"]
-        self.remove_audio = values["mute"]
-        
-        if self.remove_audio:
-            print("Muting video(s).")
-            
-        self.use_h265 = values["h265"]
-        
-        if self.use_h265:
-            print("Using H.265 codec.")
-            
-        self.portrait_mode = values["portrait"]
-        
-        if self.portrait_mode:
-            if self.res_h < self.res_w:
-                h = self.res_h
-                self.res_h = self.res_w
-                self.res_w = h
-                print("Using portrait mode, switching resolution.")
-            else:
-                print("Using portrait mode.")
-    
+
+    def support(self) -> None:
+        webbrowser.open("https://ko-fi.com/V7V82NKB5")
+
+    def github(self) -> None:
+        webbrowser.open("https://github.com/asickwav/video-compressor")
+
     def cleanup(self) -> None:
         try:
             os.remove("TEMP")
-            print("Cleaned up temp files.")
+            os.remove("ffmpeg2pass-0.log")
+            os.remove("ffmpeg2pass-0.log.mbtree")
+            self.print_console("Cleaned up temp files.")
         except:
-            print("No files to clean.")
+            pass
     
-    def trim(self) -> None:
-        if not self.trimming:
-            self.cur_video = self.selected_videos[self.cur_queue]
-            self.cur_video_trimmed = '"%s%s-trimmed%s"' % (Utils.get_video_path(self.cur_video), Utils.get_video_name(self.cur_video), self.file_extension)
-            input = '"%s"' % self.cur_video
-            trim_start = "%s" % self.trim_s
-            trim_end = "%s" % self.trim_e
-            output = self.cur_video_trimmed
-            cmd = "%s -y -ss %s -i %s -t %s -c copy %s" % (self.ffmpeg_path, trim_start, input, trim_end, output)
-            print(cmd)
-
-            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            self.trimming = True
-            print("Trimming video %s/%s..." % (self.cur_queue + 1, len(self.selected_videos)))
+    def thread_finished(self) -> None:
+        if self.thread != None and self.thread.isRunning():
+            self.thread.quit()
+            time.sleep(1)
+            self.thread = None
+        
+        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
+            self.ffmpeg_installed = True
             
-        while self.trimming:
-            stdout, stderr = self.proc.communicate()
-
-            if self.proc.returncode == 0:
-                self.trimming = False
-                self.trimmed = True
-                print("Trimming complete, starting compression...")
-                self.compress()
-            else:
-                self.trimming = False
-                self.trimmed = False
-                print("Trimming failed, aborting...")
-                self.abort()
+        self.compressing = False
+        self.cleanup()
     
-    def compress(self) -> None:
-        if not self.compressing:
-            self.cur_video = self.selected_videos[self.cur_queue]
-            
-            if self.trimmed:
-                self.cur_video = self.cur_video_trimmed
-                print("Using trimmed version: %s" % self.cur_video_trimmed)
-            
-            input = '"%s"' % self.cur_video
-            codec = "libx265" if self.use_h265 else "libx264"
-            video_bitrate = Utils.calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)
-            audio_bitrate = "-b:a %sk" % self.audio_bitrate if not self.remove_audio else "-an"
-            fps = "%s" % self.fps
-            resolution = "%s:%s" % (self.res_w, self.res_h)
-            output = '"%s%s-compressed%s"' % (Utils.get_video_path(self.cur_video), Utils.get_video_name(self.cur_video), self.file_extension)
-            
-            pass_1 = "%s -i %s -y -c:v %s -b:v %sk -r %s -vf scale=%s -pass 1 -an -f mp4 TEMP" % (
-                self.ffmpeg_path, input, codec, video_bitrate, fps, resolution
-            )
-            
-            pass_2 = "%s -y -i %s -y -c:v %s -b:v %sk -r %s -vf scale=%s -pass 2 -c:a aac %s %s" % (
-                self.ffmpeg_path, input, codec, video_bitrate, fps, resolution, audio_bitrate, output
-            )
-            
-            if self.cur_pass == 1:
-                self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE)
-            else:
-                self.proc = subprocess.Popen(pass_2, stdout=subprocess.PIPE)
-                
-            self.compressing = True
-            print("Compressing video %s/%s, Pass %s/2..." % (self.cur_queue + 1, len(self.selected_videos), self.cur_pass))
-        
-        while self.compressing:
-            stdout, stderr = self.proc.communicate()
-
-            if self.proc.returncode == 0:
-                self.compressing = False
-                
-                if self.cur_pass == 1:
-                    self.cur_pass = 2
-                    self.compress()
-                else:
-                    print("Video %s/%s compressed!\n" % (self.cur_queue + 1, len(self.selected_videos)))
-                    self.cur_pass = 1
-                    
-                    if (self.cur_queue + 1 < len(self.selected_videos)):
-                        self.cur_queue += 1
-                        self.compress()
-                    else:
-                        print('Job done!\n')
-            else:
-                self.compressing = False
-                print("Compression failed, aborting...")
-                self.abort()
-    
-    def main(self) -> None:
-        self.window = sg.Window("%s Video Compressor %s" % (self.author, self.version), self.layout, element_justification="center")
-        
-        while True:
-            event, values = self.window.read(timeout=1)
-
-            if event in (sg.WIN_CLOSED, "Exit", "Cancel"):
-                self.abort()
-                sys.exit()
-
-            if event == "start":
-                self.start(values)
-            
-            if event == "abort":
-                self.abort()
-            
-            if event == "help":
-                self.help()
-            
-            if event == "github":
-                webbrowser.open("https://github.com/asickwav/video-compressor")
-            
-            if event == "support":
-                webbrowser.open("https://ko-fi.com/V7V82NKB5")
-            
-            if not Utils.ffmpeg_installed:
-                if not Utils.ffmpeg_is_downloading:
-                    x = threading.Thread(target=Utils.install_ffmpeg)
-                    x.start()
-                    
-                self.window.Read()
-        
+    def closeEvent(self, event) -> None:
+        self.save_config()
+        self.abort()
+        event.accept()
 
 if __name__ == "__main__":
+    app = QApplication([])
+    app.setWindowIcon(QIcon("icon.ico"))
     main = Main()
+    app.exec_()
