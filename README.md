@@ -1,17 +1,11 @@
 ## Asick Video Compressor
-A multi-platform video compressor and converter, created in Python.
+A simple video compressor, created in Python.
 
 ### Features
 - Compress multiple video files in a queue system.
 - Compress videos to any file size.
-- Trim your videos.
-- Convert to different resolutions.
-- Convert to different file types.
-- Convert to different framerates.
 - Remove audio from videos.
 - Automatically downloads and installs ffmpeg.
-
-and more!
 
 ### Preview
 ![Screenshot 1](https://github.com/asickwav/video-compressor/raw/main/screenshot.png)
