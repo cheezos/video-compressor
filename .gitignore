@@ -126,7 +126,7 @@ FFmpeg/ffprobe.exe
 src/ffmpeg-release-essentials.zip
 src/video-compressor-old.py
 src/utils-old.py
-src/setup.py
 src/main-old.py
 277711cea43d8ee54e1ecd8c8e1c3eb0.mp4
 desktop.ini
+config.ini

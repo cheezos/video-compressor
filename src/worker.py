@@ -9,16 +9,21 @@ class Worker(QObject):
     signal_message = pyqtSignal(str, bool)
     signal_finished = pyqtSignal()
     
-    def __init__(self, videos=[], file_size=8, remove_audio=False) -> None:
+    def __init__(self, videos=[], file_size=8.0, remove_audio=False) -> None:
         QObject.__init__(self)
-        self.download_link = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-        self.download_path = "%s/downloads/ffmpeg-release-essentials.zip" % os.getcwd()
-        self.ffmpeg_path = "%s/ffmpeg" % os.getcwd()
         
+        # FFmpeg
+        self.download_link: str = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+        self.download_path: str = "%s/downloads/ffmpeg-release-essentials.zip" % os.getcwd()
+        self.ffmpeg_path: str = "%s/ffmpeg" % os.getcwd()
+        
+        # Compression settings        
         self.target_file_size: float = float(file_size)
         self.remove_audio: bool = bool(remove_audio)
-        self.audio_bitrate = 128
+        self.audio_bitrate: float = 64.0
+        self.video_bitrate: float
         
+        # Internal
         self.compressing: bool = False
         self.selected_videos: list = videos
         self.cur_video: str = ""
@@ -27,7 +32,9 @@ class Worker(QObject):
         self.cur_video_extension: str = ""
         self.cur_queue: int = 0
         self.cur_pass: int = 1
-        self.proc: str = ""
+        self.proc: subprocess.Popen
+        self.input: str
+        self.output: str
     
     def install_ffmpeg(self) -> None:
         if not os.path.exists("%s/ffmpeg" % os.getcwd()):
@@ -73,30 +80,37 @@ class Worker(QObject):
             for name in fnmatch.filter(filelist, "*.exe"):
                 yield os.path.join(path, name)
     
+    def pass_1(self) -> None:
+        self.cur_video = self.selected_videos[self.cur_queue]
+        self.input = '"%s"' % self.cur_video
+        self.video_bitrate = self.calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)
+        self.output = '"%s%s-compressed.mp4"' % (self.get_video_path(self.cur_video), self.get_video_name(self.cur_video))
+        
+        pass_1 = "%s -i %s -y -c:v libx264 -vf scale=720:trunc(ow/a/2)*2 -b:v %sk -pass 1 -an -f mp4 TEMP" % (
+            self.get_ffmpeg_path(), self.input, self.video_bitrate
+        )
+        
+        self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE, shell=False)
+        
+    
+    def pass_2(self) -> None:
+        audio = "-b:a %sk" % self.audio_bitrate if not self.remove_audio else "-an"
+        pass_2 = "%s -y -i %s -y -c:v libx264 -vf scale=720:trunc(ow/a/2)*2 -b:v %sk -pass 2 -c:a aac %s %s" % (
+            self.get_ffmpeg_path(), self.input, self.video_bitrate, audio, self.output
+        )
+        
+        self.proc = subprocess.Popen(pass_2, stdout=subprocess.PIPE, shell=False)
+    
     def compress(self) -> None:
         if not self.compressing:
-            self.cur_video = self.selected_videos[self.cur_queue]
-            
-            input = '"%s"' % self.cur_video
-            video_bitrate = self.calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)
-            audio_bitrate = "-b:a %sk" % self.audio_bitrate if not self.remove_audio else "-an"
-            output = '"%s%s-compressed.mp4"' % (self.get_video_path(self.cur_video), self.get_video_name(self.cur_video))
-            
-            pass_1 = "%s -i %s -y -c:v libx264 -b:v %sk -pass 1 -an -f mp4 TEMP" % (
-                self.get_ffmpeg_path(), input, video_bitrate
-            )
-            
-            pass_2 = "%s -y -i %s -y -c:v libx264 -b:v %sk -pass 2 -c:a aac %s %s" % (
-                self.get_ffmpeg_path(), input, video_bitrate, audio_bitrate, output
-            )
-                        
             if self.cur_pass == 1:
-                self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE, shell=False)
+                self.pass_1()
             else:
-                self.proc = subprocess.Popen(pass_2, stdout=subprocess.PIPE, shell=False)
+                self.pass_2()
                 
             self.compressing = True
-            self.signal_message.emit("Compressing video %s/%s, Pass %s/2..." % (self.cur_queue + 1, len(self.selected_videos), self.cur_pass), False)
+            self.signal_message.emit("Compressing video %s/%s, Pass %s/2..." % (
+                self.cur_queue + 1, len(self.selected_videos), self.cur_pass), False)
         
         while self.compressing:
             stdout, stderr = self.proc.communicate()
@@ -108,7 +122,9 @@ class Worker(QObject):
                     self.cur_pass = 2
                     self.compress()
                 else:
-                    self.signal_message.emit("Video %s/%s compressed!\n" % (self.cur_queue + 1, len(self.selected_videos)), False)
+                    self.signal_message.emit("Video %s/%s compressed!" % (
+                        self.cur_queue + 1, len(self.selected_videos)), False)
+                    
                     self.cur_pass = 1
                     
                     if (self.cur_queue + 1 < len(self.selected_videos)):
@@ -126,18 +142,17 @@ class Worker(QObject):
         video_duration = self.get_video_duration(video)
 
         if video_duration:
-            magic = max(64.0, round(((target_file_size * 8192.0) / (1.048576 * video_duration) - audio_bitrate)))
+            magic = max(1.0, round(((target_file_size * 8192.0) / (1.048576 * video_duration) - audio_bitrate)))
             
-            if magic <= 64:
+            if magic <= 64.0:
                 self.signal_message.emit(
-                    "\n[WARNING] Calculated bitrate is extremely low! This is due to your target file size and the length of the video.", False)
-                
-                self.signal_message.emit(
-                    "Try increasing your target file size or compress shorter videos.\n", False)
+                    "[WARNING] Calculated video bitrate is extremely low (%skbps)!\nIncrease your target file size for better quality." % magic, False)
+            else:
+                self.signal_message.emit("New video bitrate: %skbps" % magic, False)
             
             return magic
         else:
-            return None
+            return 1.0
 
     def get_video_duration(self, video) -> float:
         try:
@@ -146,7 +161,7 @@ class Worker(QObject):
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             return float(proc.stdout.readline())
         except:
-            self.signal_message.emit("Couldn't get video duration!", False)
+            self.signal_message.emit("[WARNING] Couldn't get video duration!", False)
             return None
 
     def get_video_name(self, video) -> str:

@@ -3,14 +3,15 @@
 # Python 3.9.7 64-bit
 
 from PyQt5.QtCore import QThread, Qt
-from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QPushButton, QLabel, QLineEdit, QCheckBox, QTextEdit
-from PyQt5.QtGui import QFont, QTextCursor
-import os, psutil, webbrowser, time
+from PyQt5.QtWidgets import QApplication, QFileDialog, QPushButton, QLabel, QLineEdit, QCheckBox, QTextEdit, QMainWindow
+from PyQt5.QtGui import QFont, QTextCursor, QIcon
+from configparser import ConfigParser
+import os, psutil, webbrowser, time, json
 from worker import Worker
 
-class Main(QWidget):
-    def __init__(self) -> None:
-        super().__init__()
+class Main(QMainWindow):
+    def __init__(self, parent=None) -> None:
+        super(Main, self).__init__(parent)
 
         # App info
         self.version: str = "v1.2.0"
@@ -18,11 +19,13 @@ class Main(QWidget):
         self.author: str = "Asick"
 
         # FFmpeg
-        self.ffmpeg_path = "%s/ffmpeg" % os.getcwd()
-        self.ffmpeg_installed = False
+        self.ffmpeg_path: str = "%s/ffmpeg" % os.getcwd()
+        self.ffmpeg_installed: bool = False
 
         # Video Options
-        self.target_file_size: float = 8
+        self.config: ConfigParser = ConfigParser()
+        self.selected_videos: list = []
+        self.target_file_size: float = 20.0
         self.remove_audio: bool = False
 
         # UI
@@ -138,15 +141,81 @@ class Main(QWidget):
         self.compressing: bool = False
 
         # Internal
-        self.selected_videos: list = []
-        
-        # Init UI
-        self.init_UI()
-        
-        # Threading
         self.thread: QThread
         self.worker: Worker
-        self.validate_ffmpeg()
+        
+        # Init
+        self.init_UI()
+        self.init_config()
+        self.init_ffmpeg()
+    
+    def print_console(self, message, overwrite_all=False) -> None:
+        if overwrite_all:
+            self.output.setText("%s\n" % message)
+        else:
+            self.output.setText(self.output.toPlainText() + "%s\n" % message)
+            
+        self.output.moveCursor(QTextCursor.End)
+        print(message)
+    
+    def init_config(self) -> None:
+        self.config.read(os.getcwd() + "/config.ini")
+        
+        if os.path.exists(os.getcwd() + "/config.ini"):
+            video_list = self.config.get("Options", "last_video_list").split(",")
+            
+            if video_list[0] == "":
+                self.selected_videos.clear()
+            else:
+                self.selected_videos = self.config.get("Options", "last_video_list").split(",")
+                self.ledit_video_list.setText(str(self.selected_videos))
+                
+            self.target_file_size = self.config.getfloat("Options", "target_file_Size")
+            self.remove_audio = self.config.getboolean("Options", "remove_audio")
+            
+            self.ledit_file_size.setText(str(self.target_file_size))
+            self.cb_remove_audio.setChecked(self.remove_audio)
+            
+            self.print_console("Loaded config.")
+        else:
+            self.config.add_section("Options")
+            self.config.set("Options", "last_video_list", self.list_to_string(self.selected_videos))
+            self.config.set("Options", "target_file_size", str(self.target_file_size))
+            self.config.set("Options", "remove_audio", str(self.remove_audio))
+            
+            with open(os.getcwd() + "/config.ini", "w") as config:
+                self.config.write(config)
+
+            config.close()
+            self.init_config()
+    
+    def list_to_string(self, list_to_parse) -> str:
+        s = ""
+        index = 1
+        
+        for e in list_to_parse:
+            if index != len(list_to_parse):
+                s += "%s," % e
+            else:
+                s += "%s" % e
+            
+            index += 1
+            
+        return s    
+    
+    def save_config(self) -> None:
+        self.target_file_size = self.ledit_file_size.text()
+        self.remove_audio = self.cb_remove_audio.isChecked()
+                
+        self.config.set("Options", "last_video_list", self.list_to_string(self.selected_videos))
+        self.config.set("Options", "target_file_size", str(self.target_file_size))
+        self.config.set("Options", "remove_audio", str(self.remove_audio))
+        
+        with open(os.getcwd() + "/config.ini", "w") as config:
+            self.config.write(config)
+
+        config.close()
+        self.print_console("Config saved.")
 
     def init_UI(self) -> None:
         screen = QApplication.primaryScreen()
@@ -160,6 +229,21 @@ class Main(QWidget):
         self.setMinimumSize(self.width, self.height)
         self.setMaximumSize(self.width, self.height)
         self.show()
+    
+    def init_ffmpeg(self) -> bool:  
+        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
+            self.ffmpeg_installed = True
+            return True
+        
+        self.thread = QThread()
+        self.worker = Worker()
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.install_ffmpeg)
+        self.worker.signal_message.connect(self.print_console)
+        self.worker.signal_finished.connect(self.thread_finished)
+        self.thread.start()
+        
+        return False
     
     def select_videos(self) -> None:
         options = QFileDialog.Options()
@@ -191,6 +275,8 @@ class Main(QWidget):
             self.print_console("Compression started, click Abort to stop.")
 
     def abort(self) -> None:
+        if not self.compressing: return
+        
         for proc in psutil.process_iter():
             if "ffmpeg" in proc.name():
                 p = psutil.Process(proc.pid)
@@ -200,7 +286,6 @@ class Main(QWidget):
         
         self.thread_finished()
         self.cleanup()
-        self.print_console("Aborted.")
 
     def support(self) -> None:
         webbrowser.open("https://ko-fi.com/V7V82NKB5")
@@ -216,41 +301,26 @@ class Main(QWidget):
             self.print_console("Cleaned up temp files.")
         except:
             pass
-
-    def print_console(self, message, overwrite_all=False) -> None:
-        if overwrite_all:
-            self.output.setText("%s\n" % message)
-        else:
-            self.output.setText(self.output.toPlainText() + "%s\n" % message)
-            
-        self.output.moveCursor(QTextCursor.End)
     
     def thread_finished(self) -> None:
-        if self.thread != None:
+        if self.thread != None and self.thread.isRunning():
             self.thread.quit()
             time.sleep(1)
             self.thread = None
+        
+        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
+            self.ffmpeg_installed = True
             
         self.compressing = False
         self.cleanup()
-        self.validate_ffmpeg()
-
-    def validate_ffmpeg(self) -> bool:  
-        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
-            self.ffmpeg_installed = True
-            return True
-        
-        self.thread = QThread()
-        self.worker = Worker()
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.install_ffmpeg)
-        self.worker.signal_message.connect(self.print_console)
-        self.worker.signal_finished.connect(self.thread_finished)
-        self.thread.start()
-        
-        return False
+    
+    def closeEvent(self, event) -> None:
+        self.save_config()
+        self.abort()
+        event.accept()
 
 if __name__ == "__main__":
     app = QApplication([])
+    app.setWindowIcon(QIcon("icon.ico"))
     main = Main()
     app.exec_()
