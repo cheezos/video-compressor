@@ -148,16 +148,7 @@ class Main(QMainWindow):
         self.init_UI()
         self.init_config()
         self.init_ffmpeg()
-    
-    def print_console(self, message, overwrite_all=False) -> None:
-        if overwrite_all:
-            self.output.setText("%s\n" % message)
-        else:
-            self.output.setText(self.output.toPlainText() + "%s\n" % message)
-            
-        self.output.moveCursor(QTextCursor.End)
-        print(message)
-    
+        
     def init_config(self) -> None:
         self.config.read(os.getcwd() + "/config.ini")
         
@@ -167,7 +158,8 @@ class Main(QMainWindow):
             if video_list[0] == "":
                 self.selected_videos.clear()
             else:
-                self.selected_videos = self.config.get("Options", "last_video_list").split(",")
+                self.selected_videos = video_list
+                print(self.selected_videos)
                 self.ledit_video_list.setText(str(self.selected_videos))
                 
             self.target_file_size = self.config.getfloat("Options", "target_file_Size")
@@ -188,20 +180,6 @@ class Main(QMainWindow):
 
             config.close()
             self.init_config()
-    
-    def list_to_string(self, list_to_parse) -> str:
-        s = ""
-        index = 1
-        
-        for e in list_to_parse:
-            if index != len(list_to_parse):
-                s += "%s," % e
-            else:
-                s += "%s" % e
-            
-            index += 1
-            
-        return s    
     
     def save_config(self) -> None:
         self.target_file_size = self.ledit_file_size.text()
@@ -230,26 +208,25 @@ class Main(QMainWindow):
         self.setMaximumSize(self.width, self.height)
         self.show()
     
-    def init_ffmpeg(self) -> bool:  
+    def init_ffmpeg(self) -> None:  
         if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
             self.ffmpeg_installed = True
-            return True
-        
-        self.thread = QThread()
-        self.worker = Worker()
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.install_ffmpeg)
-        self.worker.signal_message.connect(self.print_console)
-        self.worker.signal_finished.connect(self.thread_finished)
-        self.thread.start()
-        
-        return False
-    
+        else:
+            self.compression_completed()
+            self.thread = QThread(parent=self)
+            self.worker = Worker()
+            self.worker.moveToThread(self.thread)
+            self.thread.started.connect(self.worker.install_ffmpeg)
+            self.worker.signal_message.connect(self.print_console)
+            self.worker.signal_ffmpeg_install_completed.connect(self.ffmpeg_install_completed)
+            self.thread.start()
+            
     def select_videos(self) -> None:
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         self.selected_videos, _ = QFileDialog.getOpenFileNames(self, "QFileDialog.getOpenFileNames()", "", "All Files (*);;Python Files (*.py)", options=options)
         self.ledit_video_list.setText(str(self.selected_videos))
+        print(self.selected_videos)
 
     def start(self) -> None:
         if not self.compressing:
@@ -259,18 +236,18 @@ class Main(QMainWindow):
                 else:
                     self.target_file_size = self.ledit_file_size.text()
                     self.remove_audio = self.cb_remove_audio.isChecked()
-                    
-                    self.thread = QThread()
+                    self.compression_completed()
+                    self.thread = QThread(parent=self)
                     self.worker = Worker(self.selected_videos, self.target_file_size, self.remove_audio)
                     self.worker.moveToThread(self.thread)
                     self.thread.started.connect(self.worker.compress)
                     self.worker.signal_message.connect(self.print_console)
-                    self.worker.signal_finished.connect(self.thread_finished)
+                    self.worker.signal_compression_completed.connect(self.compression_completed)
                     self.thread.start()
                     
                     self.compressing = True
             else:
-                self.print_console('No videos selected!')
+                self.print_console("No videos selected!")
         else:
             self.print_console("Compression started, click Abort to stop.")
 
@@ -284,7 +261,7 @@ class Main(QMainWindow):
 
                 self.compressing = False
         
-        self.thread_finished()
+        self.compression_completed()
         self.cleanup()
 
     def support(self) -> None:
@@ -292,6 +269,46 @@ class Main(QMainWindow):
 
     def github(self) -> None:
         webbrowser.open("https://github.com/asickwav/video-compressor")
+    
+    def ffmpeg_install_completed(self) -> None:
+        self.kill_thread()
+        
+        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
+            self.ffmpeg_installed = True
+            self.print_console("FFmpeg installed!")
+        else:
+            self.init_ffmpeg()
+
+    def compression_completed(self) -> None:
+        self.kill_thread()
+        self.compressing = False
+        self.cleanup()
+    
+    def kill_thread(self) -> None:
+        if self.thread is QThread:
+            if self.thread.isRunning():
+                self.thread.quit()
+                time.sleep(1)
+                self.thread = None
+    
+    def closeEvent(self, event) -> None:
+        self.save_config()
+        self.abort()
+        event.accept()
+    
+    def list_to_string(self, list_to_parse) -> str:
+        s = ""
+        index = 1
+        
+        for e in list_to_parse:
+            if index != len(list_to_parse):
+                s += "%s," % e
+            else:
+                s += "%s" % e
+            
+            index += 1
+            
+        return s
 
     def cleanup(self) -> None:
         try:
@@ -302,22 +319,14 @@ class Main(QMainWindow):
         except:
             pass
     
-    def thread_finished(self) -> None:
-        if self.thread != None and self.thread.isRunning():
-            self.thread.quit()
-            time.sleep(1)
-            self.thread = None
-        
-        if os.path.exists(os.getcwd() + "/ffmpeg/ffmpeg.exe") and os.path.exists(os.getcwd() + "/ffmpeg/ffprobe.exe"):
-            self.ffmpeg_installed = True
+    def print_console(self, message, overwrite_all=False) -> None:
+        if overwrite_all:
+            self.output.setText("%s\n" % message)
+        else:
+            self.output.setText(self.output.toPlainText() + "%s\n" % message)
             
-        self.compressing = False
-        self.cleanup()
-    
-    def closeEvent(self, event) -> None:
-        self.save_config()
-        self.abort()
-        event.accept()
+        self.output.moveCursor(QTextCursor.End)
+        print(message)
 
 if __name__ == "__main__":
     app = QApplication([])

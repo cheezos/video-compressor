@@ -7,7 +7,8 @@ import os, requests, shutil, fnmatch, subprocess
 
 class Worker(QObject):
     signal_message = pyqtSignal(str, bool)
-    signal_finished = pyqtSignal()
+    signal_ffmpeg_install_completed = pyqtSignal()
+    signal_compression_completed = pyqtSignal()
     
     def __init__(self, videos=[], file_size=8.0, remove_audio=False) -> None:
         QObject.__init__(self)
@@ -20,8 +21,8 @@ class Worker(QObject):
         # Compression settings        
         self.target_file_size: float = float(file_size)
         self.remove_audio: bool = bool(remove_audio)
-        self.audio_bitrate: float = 64.0
-        self.video_bitrate: float
+        self.audio_bitrate: int = 64
+        self.video_bitrate: int
         
         # Internal
         self.compressing: bool = False
@@ -72,8 +73,7 @@ class Worker(QObject):
                 for name in files:
                     shutil.move(name, "%s/ffmpeg" % os.getcwd())
             
-            self.signal_message.emit("FFmpeg installed!", True)
-            self.signal_finished.emit()
+            self.signal_ffmpeg_install_completed.emit()
         
     def get_files(self) -> None:
         for path, dirlist, filelist in os.walk(os.getcwd() + "/ffmpeg"):
@@ -81,6 +81,7 @@ class Worker(QObject):
                 yield os.path.join(path, name)
     
     def pass_1(self) -> None:
+        if self.remove_audio: self.audio_bitrate = 0
         self.cur_video = self.selected_videos[self.cur_queue]
         self.input = '"%s"' % self.cur_video
         self.video_bitrate = self.calculate_video_bitrate(self.cur_video, self.target_file_size, self.audio_bitrate)
@@ -92,7 +93,6 @@ class Worker(QObject):
         
         self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE, shell=False)
         
-    
     def pass_2(self) -> None:
         audio = "-b:a %sk" % self.audio_bitrate if not self.remove_audio else "-an"
         pass_2 = "%s -y -i %s -y -c:v libx264 -vf scale=720:trunc(ow/a/2)*2 -b:v %sk -pass 2 -c:a aac %s %s" % (
@@ -132,11 +132,11 @@ class Worker(QObject):
                         self.compress()
                     else:
                         self.signal_message.emit('Job done!', False)
-                        self.signal_finished.emit()
+                        self.signal_compression_completed.emit()
             else:
                 self.compressing = False
                 self.signal_message.emit("Compression aborted!", False)
-                self.signal_finished.emit()
+                self.signal_compression_completed.emit()
     
     def calculate_video_bitrate(self, video, target_file_size, audio_bitrate) -> float:
         video_duration = self.get_video_duration(video)
