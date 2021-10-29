@@ -30,7 +30,7 @@ class Worker(QObject):
         # Compression settings
         self.target_file_size: float = float(file_size)
         self.remove_audio: bool = bool(remove_audio)
-        self.audio_bitrate: int = 64
+        self.audio_bitrate: int = 128
         self.video_bitrate: int
 
         # Internal
@@ -47,18 +47,18 @@ class Worker(QObject):
         self.output: str
 
     def install_ffmpeg(self) -> None:
-        if not os.path.exists("%s/ffmpeg" % os.getcwd()):
-            os.mkdir("%s/ffmpeg" % os.getcwd())
+        if not os.path.exists(f"{os.getcwd()}/ffmpeg"):
+            os.mkdir(f"{os.getcwd()}/ffmpeg")
             self.signal_message.emit("FFmpeg directory created.", False)
 
-        if not os.path.exists("%s/downloads" % os.getcwd()):
-            os.mkdir("%s/downloads" % os.getcwd())
+        if not os.path.exists(f"{os.getcwd()}/downloads"):
+            os.mkdir(f"{os.getcwd()}/downloads")
             self.signal_message.emit("Downloads directory created.", False)
 
-        if not os.path.isfile("%s/ffmpeg.exe" % self.ffmpeg_path):
+        if not os.path.isfile(f"{self.ffmpeg_path}/ffmpeg.exe"):
             with open(self.ffmpeg_download_path, "wb") as f:
                 self.signal_message.emit(
-                    "Downloading ffmpeg to %s" % self.ffmpeg_download_path, True
+                    f"Downloading ffmpeg to {self.ffmpeg_download_path}", True
                 )
                 response = requests.get(self.ffmpeg_download_link, stream=True)
                 total_length = response.headers.get("content-length")
@@ -74,14 +74,7 @@ class Worker(QObject):
                         f.write(data)
                         progress_percent = (dl / total_length) * 100
                         self.signal_message.emit(
-                            "Downloading FFmpeg: %s/%s (%s%s)"
-                            % (
-                                round(dl),
-                                round(total_length),
-                                round(progress_percent),
-                                "%",
-                            ),
-                            True,
+                            f"Downloading FFmpeg: ({round(progress_percent)}%)", True
                         )
 
             self.signal_message.emit("Unzipping contents...", True)
@@ -91,12 +84,12 @@ class Worker(QObject):
 
             if files:
                 for name in files:
-                    shutil.move(name, "%s/ffmpeg" % os.getcwd())
+                    shutil.move(name, f"{os.getcwd()}/ffmpeg")
 
             self.signal_ffmpeg_install_completed.emit()
 
     def get_files(self) -> None:
-        for path, dirlist, filelist in os.walk(os.getcwd() + "/ffmpeg"):
+        for path, dirlist, filelist in os.walk(f"{os.getcwd()}/ffmpeg"):
             for name in fnmatch.filter(filelist, "*.exe"):
                 yield os.path.join(path, name)
 
@@ -112,20 +105,24 @@ class Worker(QObject):
             self.get_video_path(self.cur_video),
             self.get_video_name(self.cur_video),
         )
-        pass_1 = (
-            "%s -i %s -y -c:v libx264 -vf scale=720:trunc(ow/a/2)*2 -b:v %sk -pass 1 -an -f mp4 TEMP"
-            % (self.get_ffmpeg_path(), self.input, self.video_bitrate)
+        pass_1 = "%s -i %s -y -c:v libx264 -b:v %sk -r 30.0 -pass 1 -an -f mp4 TEMP" % (
+            self.get_ffmpeg_path(),
+            self.input,
+            self.video_bitrate,
         )
         self.proc = subprocess.Popen(pass_1, stdout=subprocess.PIPE, shell=False)
 
     def pass_2(self) -> None:
         audio = "-b:a %sk" % self.audio_bitrate if not self.remove_audio else "-an"
-        pass_2 = "%s -y -i %s -y -c:v libx264 -vf scale=720:trunc(ow/a/2)*2 -b:v %sk -pass 2 -c:a aac %s %s" % (
-            self.get_ffmpeg_path(),
-            self.input,
-            self.video_bitrate,
-            audio,
-            self.output,
+        pass_2 = (
+            "%s -y -i %s -y -c:v libx264 -b:v %sk -r 30.0 -pass 2 -c:a aac %s %s"
+            % (
+                self.get_ffmpeg_path(),
+                self.input,
+                self.video_bitrate,
+                audio,
+                self.output,
+            )
         )
         self.proc = subprocess.Popen(pass_2, stdout=subprocess.PIPE, shell=False)
 
@@ -138,8 +135,7 @@ class Worker(QObject):
 
             self.compressing = True
             self.signal_message.emit(
-                "Compressing video %s/%s, Pass %s/2..."
-                % (self.cur_queue + 1, len(self.selected_videos), self.cur_pass),
+                f"Compressing video {self.cur_queue + 1}/{len(self.selected_videos)}, Pass {self.cur_pass}/2...",
                 False,
             )
 
@@ -154,8 +150,7 @@ class Worker(QObject):
                     self.compress()
                 else:
                     self.signal_message.emit(
-                        "Video %s/%s compressed!"
-                        % (self.cur_queue + 1, len(self.selected_videos)),
+                        f"Video {self.cur_queue + 1}/{len(self.selected_videos)} compressed!",
                         False,
                     )
 
@@ -188,12 +183,11 @@ class Worker(QObject):
 
             if magic <= 64.0:
                 self.signal_message.emit(
-                    "[WARNING] Calculated video bitrate is extremely low (%skbps)!\nIncrease your target file size for better quality."
-                    % magic,
+                    f"[WARNING] Calculated video bitrate is extremely low ({magic}kbps)!\nIncrease your target file size for better quality.",
                     False,
                 )
             else:
-                self.signal_message.emit("New video bitrate: %skbps" % magic, False)
+                self.signal_message.emit(f"New video bitrate: {magic}kbps", False)
 
             return magic
         else:
@@ -201,11 +195,8 @@ class Worker(QObject):
 
     def get_video_duration(self, video) -> float:
         try:
-            video = '"%s"' % video
-            cmd = (
-                "%s -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 %s"
-                % (self.get_ffprobe_path(), video)
-            )
+            video = f"{video}"
+            cmd = f"{self.get_ffprobe_path()} -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 {video}"
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             return float(proc.stdout.readline())
         except:
@@ -230,10 +221,10 @@ class Worker(QObject):
         return just_path
 
     def get_ffmpeg_path(self) -> str:
-        return "%s/ffmpeg/ffmpeg.exe" % os.getcwd()
+        return f'"{os.getcwd()}/ffmpeg/ffmpeg.exe"'
 
     def get_ffprobe_path(self) -> str:
-        return "%s/ffmpeg/ffprobe.exe" % os.getcwd()
+        return f'"{os.getcwd()}/ffmpeg/ffprobe.exe"'
 
     def list_videos(self, videos) -> list:
         if videos != "":

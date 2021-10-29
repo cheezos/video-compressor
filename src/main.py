@@ -24,8 +24,8 @@ class Main(QMainWindow):
         super(Main, self).__init__(parent)
 
         # App info
-        self.version: str = "v1.2.1"
-        self.title: str = "Asick Video Compressor %s" % self.version
+        self.version: str = "v1.2.2"
+        self.title: str = f"Asick Video Compressor {self.version}"
         self.author: str = "Asick"
 
         # Video Options
@@ -33,12 +33,12 @@ class Main(QMainWindow):
         self.selected_videos: list = []
         self.target_file_size: float = 20.0
         self.remove_audio: bool = False
-        self.ffmpeg_path: str = "%s/ffmpeg" % os.getcwd()
+        self.ffmpeg_path: str = f"{os.getcwd()}/ffmpeg"
         self.ffmpeg_download_link: str = (
             "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
         )
         self.ffmpeg_download_path: str = (
-            "%s/downloads/ffmpeg-release-essentials.zip" % os.getcwd()
+            f"{os.getcwd()}/downloads/ffmpeg-release-essentials.zip"
         )
 
         # States
@@ -55,7 +55,7 @@ class Main(QMainWindow):
 
         # Title
         self.label_title: QLabel = QLabel(
-            "%s Video Compressor %s" % (self.author, self.version), self
+            f"{self.author} Video Compressor {self.version}", self
         )
         self.label_title.setFont(QFont("Arial", 12))
         self.label_title.setFixedWidth(self.width)
@@ -157,7 +157,7 @@ class Main(QMainWindow):
         self.button_github.setFixedHeight(30)
         self.button_github.setToolTip("Open Github page.")
         self.button_github.move(round(self.width * 0.75) - 5, self.height - 40)
-        self.button_github.clicked.connect(self.support)
+        self.button_github.clicked.connect(self.github)
 
         # Init
         self.init_UI()
@@ -190,7 +190,7 @@ class Main(QMainWindow):
         else:
             self.config.add_section("Options")
             self.set_config()
-            with open(os.getcwd() + "/config.ini", "w") as config:
+            with open(f"{os.getcwd()}/config.ini", "w") as config:
                 self.config.write(config)
 
             config.close()
@@ -201,7 +201,7 @@ class Main(QMainWindow):
         self.remove_audio = self.cb_remove_audio.isChecked()
         self.set_config()
 
-        with open(os.getcwd() + "/config.ini", "w") as config:
+        with open(f"{os.getcwd()}/config.ini", "w") as config:
             self.config.write(config)
 
         config.close()
@@ -346,9 +346,9 @@ class Main(QMainWindow):
         index = 1
         for e in list_to_parse:
             if index != len(list_to_parse):
-                s += "%s," % e
+                s += f"{e},"
             else:
-                s += "%s" % e
+                s += f"{e}"
 
             index += 1
 
@@ -365,9 +365,9 @@ class Main(QMainWindow):
 
     def print_console(self, message, overwrite_all=False) -> None:
         if overwrite_all:
-            self.output.setText("%s\n" % message)
+            self.output.setText(f"{message}\n")
         else:
-            self.output.setText(self.output.toPlainText() + "%s\n" % message)
+            self.output.setText(self.output.toPlainText() + f"{message}\n")
 
         self.output.moveCursor(QTextCursor.End)
         print(message)
