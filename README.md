@@ -1,4 +1,4 @@
-## Asick Video Compressor
+## Big Slime Video Compressor
 A simple video compressor, created in Python.
 
 ### Features
@@ -8,7 +8,7 @@ A simple video compressor, created in Python.
 - Automatically downloads and installs ffmpeg.
 
 ### Preview
-![Screenshot 1](https://github.com/asickwav/video-compressor/raw/main/screenshot.png)
+![Screenshot 1](https://github.com/big-slime/video-compressor/raw/main/screenshot.png)
 
 ### Love this app?
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/V7V82NKB5)
