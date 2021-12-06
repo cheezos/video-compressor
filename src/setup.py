@@ -1,5 +1,9 @@
 from cx_Freeze import setup, Executable
+from pathlib import Path
 import os
+
+icon_path: str = Path(os.getcwd())
+icon_path = f"{icon_path.parent.absolute()}/icon.ico"
 
 build_exe_options = {
     "excludes": ["tkinter"],
@@ -17,7 +21,7 @@ setup(
             "main.py",
             target_name="Big Slime Video Compressor v1.2.3.exe",
             base="Win32GUI",
-            icon=f"{os.getcwd()}/icon.ico",
+            icon=icon_path,
         )
     ],
 )
