@@ -23,6 +23,10 @@ class Main(QMainWindow):
     def __init__(self) -> None:
         super(Main, self).__init__()
 
+        # Icon
+        icon_path: str = f"{os.getcwd()}/icon.ico"
+        self.setWindowIcon(QIcon(icon_path))
+
         # App info
         self.version: str = "v1.2.3"
         self.title: str = f"Big Slime Video Compressor {self.version}"
@@ -348,6 +352,5 @@ class Main(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication([])
-    app.setWindowIcon(QIcon("icon.ico"))
     main = Main()
     app.exec_()

@@ -1,4 +1,5 @@
 from cx_Freeze import setup, Executable
+import os
 
 build_exe_options = {
     "excludes": ["tkinter"],
@@ -16,7 +17,7 @@ setup(
             "main.py",
             target_name="Big Slime Video Compressor v1.2.3.exe",
             base="Win32GUI",
-            icon="icon.ico",
+            icon=f"{os.getcwd()}/icon.ico",
         )
     ],
 )
