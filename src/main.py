@@ -4,7 +4,7 @@
 
 from PyQt5.QtCore import QThread, Qt
 from PyQt5.QtWidgets import (
-    QApplication,
+    QApplication,  
     QFileDialog,
     QPushButton,
     QLabel,
@@ -75,6 +75,7 @@ class Main(QMainWindow):
         self.label_file_size.setToolTip(
             "Set the file size to compress your videos to in megabytes."
         )
+        
         self.label_file_size.move(10, 50)
         self.label_file_size.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
 
