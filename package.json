@@ -1,5 +1,31 @@
 {
-  "dependencies": {
-    "electron": "^16.0.5"
-  }
+	"name": "video-compressor",
+	"version": "1.0.0",
+	"description": "",
+	"main": "./dist/index.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "npm run build && electron .",
+		"dev": "concurrently \"tsc -w\" \"electron .\""
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/big-slime/video-compressor.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/big-slime/video-compressor/issues"
+	},
+	"homepage": "https://github.com/big-slime/video-compressor#readme",
+	"dependencies": {
+		"electron": "^16.0.5",
+		"electron-reload": "^2.0.0-alpha.1",
+		"typescript": "^4.5.4"
+	},
+	"devDependencies": {
+		"@types/electron": "^1.6.10",
+		"concurrently": "^6.5.0"
+	}
 }
