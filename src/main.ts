@@ -1,8 +1,5 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-import electronReload from "electron-reload";
 import { getVideoData, compressQueue } from "./utils";
-
-electronReload(__dirname, {});
 
 let mainWindow: BrowserWindow;
 let videoData: { base: string; path: string; name: string; ext: string }[] = [];
