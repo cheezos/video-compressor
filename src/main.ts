@@ -6,12 +6,11 @@ electronReload(__dirname, {});
 
 let mainWindow: BrowserWindow;
 let videoData: { base: string; path: string; name: string; ext: string }[] = [];
-let currentVideo: number = 1;
 
 app.on("ready", () => {
 	mainWindow = new BrowserWindow({
-		width: 600,
-		height: 450,
+		width: 400,
+		height: 300,
 		webPreferences: {
 			contextIsolation: false,
 			nodeIntegration: true,
@@ -25,7 +24,6 @@ app.on("ready", () => {
 
 	mainWindow.on("ready-to-show", () => {
 		mainWindow.show();
-		// mainWindow.webContents.openDevTools();
 	});
 
 	console.log("Window ready.");
@@ -38,7 +36,11 @@ ipcMain.on("droppedVideos", (event, vids) => {
 ipcMain.on("requestCompress", (event) => {
 	event.reply("compressionStart");
 
-	compressQueue(videoData).then((_) => {
-		console.log("Compression complete.");
-	});
+	compressQueue(videoData)
+		.then(() => {
+			event.reply("compressionComplete");
+		})
+		.catch((err) => {
+			event.reply("compressionError", err);
+		});
 });

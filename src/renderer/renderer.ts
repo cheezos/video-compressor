@@ -32,21 +32,29 @@ dropZone?.addEventListener("drop", (event) => {
 		videoPaths.push(file.path);
 	}
 
-	lblStatus.innerText = `${videoPaths.length} videos selected.\nClick 'Compress' to begin.`;
+	lblStatus.innerText = `${videoPaths.length} video(s) ready to compress.`;
 	btnCompress.disabled = false;
 	ipcRenderer.send("droppedVideos", videoPaths);
-});
-
-ipcRenderer.on("compressionStart", (event) => {
-	btnCompress.disabled = true;
-	btnAbort.disabled = false;
 });
 
 ipcRenderer.on("statusUpdate", (event, msg) => {
 	lblStatus.innerText = msg;
 });
 
+ipcRenderer.on("compressionStart", (event) => {
+	lblStatus.innerText = "Compressing, please wait...";
+	btnCompress.disabled = true;
+	btnAbort.disabled = false;
+});
+
 ipcRenderer.on("compressionComplete", (event) => {
-	btnCompress.disabled = false;
+	lblStatus.innerText = "Compression complete.";
+	btnCompress.disabled = true;
+	btnAbort.disabled = true;
+});
+
+ipcRenderer.on("compressionError", (event, err) => {
+	lblStatus.innerText = `An error occured:\n${err}`;
+	btnCompress.disabled = true;
 	btnAbort.disabled = true;
 });
