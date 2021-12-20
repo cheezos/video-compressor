@@ -4,11 +4,27 @@
 		<meta charset="UTF-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="https://bootswatch.com/5/darkly/bootstrap.min.css" />
 		<title>Bepto Video Compressor</title>
 	</head>
 	<body>
-		<h1>Hello</h1>
-		<h3 id="cores">Core Count: 0</h3>
-		<script src="dist/renderer/main.js" defer></script>
+		<div
+			id="drop-zone"
+			style="display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 10px; margin: 10px auto; width: 70vw; height: 40vh; border: 3px dotted rgb(61, 61, 61)"
+		>
+			<h4><small id="lbl-status" class="text-muted">Drop videos here.</small></h4>
+		</div>
+		<div style="display: flex; align-items: center; justify-content: center; text-align: center; margin-top: 10px">
+			<div style="display: flex; margin: 5px">
+				<button type="button" class="btn btn-primary" id="btn-compress" disabled>Compress</button>
+			</div>
+			<div style="display: flex; margin: 5px">
+				<button type="button" class="btn btn-danger" id="btn-abort" disabled>Abort</button>
+			</div>
+		</div>
+		<script>
+			const exports = {};
+		</script>
+		<script src="dist/renderer/renderer.js" defer></script>
 	</body>
 </html>
