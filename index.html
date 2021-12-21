@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="stylesheet" href="https://bootswatch.com/5/darkly/bootstrap.min.css" />
+		<title>Big Slime Video Compressor</title>
+	</head>
+	<body style="overflow: hidden">
+		<!-- Drop Zone -->
+		<div
+			id="drop-zone"
+			style="
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				text-align: center;
+				border-radius: 10px;
+				margin: 10px 10px 10px 10px;
+				height: 200px;
+				border: 3px dotted rgb(50, 50, 50);
+				background: rgb(20, 20, 20);
+			"
+		>
+			<h5><small id="lbl-status" class="text-muted">Drop your videos here.</small></h5>
+		</div>
+		<!-- Progress -->
+		<div style="margin: 10px 10px 20px 10px" class="progress">
+			<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+		</div>
+		<!-- Main Buttons -->
+		<div style="display: flex; align-items: center; justify-content: center; text-align: center; margin: 10px 10px 10px 10px">
+			<div style="display: flex; margin: 5px">
+				<button type="button" class="btn btn-primary" id="btn-compress" disabled>Compress</button>
+			</div>
+			<div style="display: flex; margin: 5px">
+				<button type="button" class="btn btn-danger" id="btn-abort" disabled>Abort</button>
+			</div>
+		</div>
+		<!-- Remove Audio -->
+		<div style="margin: 10px auto 10px auto">
+			<div style="display: table; margin-left: auto; margin-right: auto" class="form-check form-switch">
+				<input id="check-remove-audio" class="form-check-input" type="checkbox" />
+				<label class="form-check-label" for="flexSwitchCheckDefault">Remove Audio</label>
+			</div>
+		</div>
+		<!-- File Size -->
+		<div style="display: flex; height: 15px; margin-left: 20%; margin-right: 20%">
+			<input id="input-file-size" class="form-control form-control-sm" type="text" placeholder="Target file size in megabytes" />
+		</div>
+		<!-- Footer -->
+		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; left: 0; width: 50%; height: 25px; background: rgb(20, 20, 20)">
+			<button id="btn-support" class="text-muted" style="background: none; border: none; margin: 0; padding: 0; cursor: pointer">
+				<small class="text-muted">Buy me a coffee?</small>
+			</button>
+		</div>
+		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; right: 0; width: 50%; height: 25px; background: rgb(20, 20, 20)">
+			<button id="btn-github" class="text-muted" style="background: none; border: none; margin: 0; padding: 0; cursor: pointer">
+				<small class="text-muted">Github | v2.0.0</small>
+			</button>
+		</div>
+		<script>
+			const exports = {};
+		</script>
+		<script src="dist/renderer/renderer.js" defer></script>
+	</body>
+</html>

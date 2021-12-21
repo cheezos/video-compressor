@@ -1,0 +1,36 @@
+{
+	"name": "video-compressor",
+	"version": "1.0.0",
+	"description": "",
+	"main": "dist/main.js",
+	"scripts": {
+		"build": "tsc",
+		"start": "npm run build && electron .",
+		"dev": "concurrently \"tsc -w\" \"electron .\""
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/big-slime/video-compressor.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/big-slime/video-compressor/issues"
+	},
+	"homepage": "https://github.com/big-slime/video-compressor#readme",
+	"dependencies": {
+		"fluent-ffmpeg": "^2.1.2"
+	},
+	"devDependencies": {
+		"@types/electron": "^1.6.10",
+		"@types/fluent-ffmpeg": "^2.1.20",
+		"concurrently": "^6.5.0",
+		"electron": "^16.0.5",
+		"ts-loader": "^9.2.6",
+		"typescript": "^4.5.4",
+		"webpack": "^5.65.0",
+		"webpack-cli": "^4.9.1",
+		"webpack-dev-server": "^4.6.0"
+	}
+}
