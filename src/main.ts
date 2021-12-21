@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Notification } from "electron";
 import { getVideoData, getVideoDuration, getCalculatedVideoBitrate } from "./utils";
 import FfmpegCommand from "fluent-ffmpeg";
 
@@ -7,22 +7,25 @@ let videoData: { base: string; path: string; name: string; ext: string }[] = [];
 let currentIndex: number = 0;
 let currentProgress: number = 1;
 let totalProgress: number = 1;
+let cmd: any = null;
 
 app.on("ready", () => {
 	mainWindow = new BrowserWindow({
 		width: 350,
-		height: 425,
+		height: 450,
 		webPreferences: {
 			contextIsolation: false,
 			nodeIntegration: true,
 			preload: __dirname + "/preload.js",
 		},
+		icon: __dirname + "/icon.ico",
 		show: false,
-		// resizable: false,
+		resizable: false,
+		autoHideMenuBar: true,
 	});
 
 	mainWindow.loadFile("./index.html");
-	mainWindow.webContents.openDevTools();
+	// mainWindow.webContents.openDevTools();
 
 	mainWindow.on("ready-to-show", () => {
 		mainWindow.show();
@@ -31,24 +34,37 @@ app.on("ready", () => {
 	console.log("Window ready.");
 });
 
+app.on("window-all-closed", () => {
+	if (process.platform !== "darwin") {
+		killFFmpeg();
+		app.quit();
+	}
+});
+
 ipcMain.on("droppedVideos", (event, vids: string[]) => {
 	videoData = getVideoData(vids);
 });
 
-ipcMain.on("requestCompress", (event) => {
+ipcMain.on("requestCompress", (event, removeAudio: boolean, targetFileSize: number) => {
 	currentIndex = 0;
 	currentProgress = 0;
 
-	compressQueue(mainWindow, videoData)
+	compressQueue(mainWindow, videoData, removeAudio, targetFileSize)
 		.then(() => {
 			event.reply("compressionComplete");
+			new Notification({ title: "Job done!", body: "Your new videos are located in the same folder." }).show();
 		})
 		.catch((err) => {
 			event.reply("compressionError", err);
+			new Notification({ title: "Error!", body: "There was an error during compression." }).show();
 		});
 });
 
-export function compressQueue(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }[]): Promise<boolean> {
+ipcMain.on("requestAbort", (event) => {
+	killFFmpeg();
+});
+
+export function compressQueue(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }[], removeAudio: boolean, targetFileSize: number): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
 		window.webContents.send("compressionStart");
 		totalProgress = videoData.length * 2;
@@ -58,12 +74,10 @@ export function compressQueue(window: BrowserWindow, videoData: { base: string; 
 
 			getVideoDuration(videoData[currentIndex].base)
 				.then((duration: number) => {
-					const bitrate = getCalculatedVideoBitrate(duration);
+					const bitrate = getCalculatedVideoBitrate(duration, targetFileSize);
 
-					compressVideo(window, videoData[currentIndex], bitrate)
+					compressVideo(window, videoData[currentIndex], bitrate, removeAudio)
 						.then(() => {
-							// currentProgress += 1;
-
 							if (currentIndex + 1 < videoData.length) {
 								currentIndex += 1;
 								compress();
@@ -84,34 +98,20 @@ export function compressQueue(window: BrowserWindow, videoData: { base: string; 
 	});
 }
 
-function compressVideo(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }, bitrate: number): Promise<boolean> {
+function compressVideo(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }, bitrate: number, removeAudio: boolean): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
-		const cmd = FfmpegCommand();
-		const input = videoData.base;
+		cmd = FfmpegCommand();
+
+		let pass1 = [`-y`, `-c:v libx264`, `-b:v ${bitrate}k`, `-pass 1`, `-an`, `-f mp4`];
+		let pass2 = [`-c:v libx264`, `-b:v ${bitrate}k`, `-pass 2`, `-c:a aac`, `-b:a 128k`];
+
+		if (removeAudio) {
+			pass2 = [`-c:v libx264`, `-b:v ${bitrate}k`, `-pass 2`, `-an`];
+		}
 
 		cmd.setFfmpegPath(__dirname + "/ffmpeg.exe");
 		cmd.setFfprobePath(__dirname + "/ffprobe.exe");
-
-		const pass1 = [
-			// pass 1
-			`-y`,
-			`-c:v libx264`,
-			`-b:v ${bitrate}k`,
-			`-pass 1`,
-			`-an`,
-			`-f mp4`,
-		];
-
-		const pass2 = [
-			// pass 2
-			`-c:v libx264`,
-			`-b:v ${bitrate}k`,
-			`-pass 2`,
-			`-c:a aac`,
-			`-b:a 128k`,
-		];
-
-		cmd.input(input);
+		cmd.input(videoData.base);
 		cmd.outputOptions(pass1);
 		cmd.output(`${videoData.path}temp`);
 
@@ -119,11 +119,10 @@ function compressVideo(window: BrowserWindow, videoData: { base: string; path: s
 			currentProgress += 1;
 			window.webContents.send("progressUpdate", currentProgress, totalProgress);
 
-			const cmd = FfmpegCommand();
+			cmd = FfmpegCommand();
 			cmd.setFfmpegPath(__dirname + "/ffmpeg.exe");
 			cmd.setFfprobePath(__dirname + "/ffprobe.exe");
-
-			cmd.input(input);
+			cmd.input(videoData.base);
 			cmd.outputOptions(pass2);
 			cmd.output(`${videoData.path}${videoData.name}-compressed${videoData.ext}`);
 
@@ -135,17 +134,24 @@ function compressVideo(window: BrowserWindow, videoData: { base: string; path: s
 				resolve(true);
 			});
 
-			cmd.on("error", (err) => {
+			cmd.on("error", (err: any) => {
 				reject(err);
 			});
 
 			cmd.run();
 		});
 
-		cmd.on("error", (err) => {
+		cmd.on("error", (err: any) => {
 			reject(err);
 		});
 
 		cmd.run();
 	});
+}
+
+function killFFmpeg(): void {
+	if (cmd != null) {
+		cmd.kill();
+		console.log("Killed FFmpeg process.");
+	}
 }

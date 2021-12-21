@@ -32,8 +32,8 @@ export function getVideoDuration(videoPath: string): Promise<number> {
 	});
 }
 
-export function getCalculatedVideoBitrate(duration: number): number {
-	let magic = Math.max((8.0 * 8192.0) / (1.048576 * duration) - 128, 100);
+export function getCalculatedVideoBitrate(duration: number, targetFileSize: number): number {
+	let magic = Math.max((targetFileSize * 8192.0) / (1.048576 * duration) - 128, 100);
 	console.log(`Calculated bitrate: ${magic}`);
 	return magic;
 }

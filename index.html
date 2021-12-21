@@ -18,7 +18,7 @@
 				text-align: center;
 				border-radius: 10px;
 				margin: 10px 10px 10px 10px;
-				height: 150px;
+				height: 200px;
 				border: 3px dotted rgb(50, 50, 50);
 				background: rgb(20, 20, 20);
 			"
@@ -26,7 +26,7 @@
 			<h5><small id="lbl-status" class="text-muted">Drop your videos here.</small></h5>
 		</div>
 		<!-- Progress -->
-		<div style="margin: 10px 10px 10px 10px" class="progress">
+		<div style="margin: 10px 10px 20px 10px" class="progress">
 			<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
 		</div>
 		<!-- Main Buttons -->
@@ -47,11 +47,18 @@
 		</div>
 		<!-- File Size -->
 		<div style="display: flex; height: 15px; margin-left: 20%; margin-right: 20%">
-			<input id="edit-file-size" class="form-control form-control-sm" type="text" placeholder="Enter a file size in megabytes." />
+			<input id="input-file-size" class="form-control form-control-sm" type="text" placeholder="Target file size in megabytes" />
 		</div>
 		<!-- Footer -->
-		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; width: 100%; background: rgb(20, 20, 20)">
-			<small id="lbl-footer" class="text-muted">github.com/big-slime | v2.0.0</small>
+		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; left: 0; width: 50%; height: 25px; background: rgb(20, 20, 20)">
+			<button id="btn-support" class="text-muted" style="background: none; border: none; margin: 0; padding: 0; cursor: pointer">
+				<small class="text-muted">Buy me a coffee?</small>
+			</button>
+		</div>
+		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; right: 0; width: 50%; height: 25px; background: rgb(20, 20, 20)">
+			<button id="btn-github" class="text-muted" style="background: none; border: none; margin: 0; padding: 0; cursor: pointer">
+				<small class="text-muted">Github | v2.0.0</small>
+			</button>
 		</div>
 		<script>
 			const exports = {};

@@ -1,22 +1,34 @@
-import { ipcRenderer } from "electron";
+import { ipcRenderer, shell } from "electron";
 
 const btnCompress: HTMLButtonElement = document.getElementById("btn-compress") as HTMLButtonElement;
 const btnAbort: HTMLButtonElement = document.getElementById("btn-abort") as HTMLButtonElement;
+const btnSupport: HTMLButtonElement = document.getElementById("btn-support") as HTMLButtonElement;
+const btnGithub: HTMLButtonElement = document.getElementById("btn-github") as HTMLButtonElement;
 const lblStatus: HTMLElement = document.getElementById("lbl-status") as HTMLElement;
 const dropZone: HTMLElement = document.getElementById("drop-zone") as HTMLElement;
 const progressBar: HTMLProgressElement = document.getElementById("progress-bar") as HTMLProgressElement;
-const checkRemoveAudio: HTMLElement = document.getElementById("check-remove-audio") as HTMLElement;
-const editFileSize: HTMLElement = document.getElementById("edit-file-size") as HTMLElement;
+const checkRemoveAudio: HTMLInputElement = document.getElementById("check-remove-audio") as HTMLInputElement;
+const inputFileSize: HTMLInputElement = document.getElementById("input-file-size") as HTMLInputElement;
 
 let videoPaths: string[] = [];
 
 btnCompress?.addEventListener("click", () => {
+	const removeAudio = checkRemoveAudio.checked;
+	const fileSize = parseFloat(inputFileSize.value) || 8.0;
 	btnCompress.disabled = true;
-	ipcRenderer.send("requestCompress");
+	ipcRenderer.send("requestCompress", removeAudio, fileSize);
 });
 
 btnAbort?.addEventListener("click", () => {
 	ipcRenderer.send("requestAbort");
+});
+
+btnSupport?.addEventListener("click", () => {
+	shell.openExternal("https://ko-fi.com/bigslime");
+});
+
+btnGithub?.addEventListener("click", () => {
+	shell.openExternal("https://github.com/big-slime/video-compressor");
 });
 
 dropZone?.addEventListener("dragover", (event) => {
@@ -54,17 +66,25 @@ ipcRenderer.on("compressionStart", (event) => {
 	lblStatus.innerText = "Compressing, please wait...";
 	btnCompress.disabled = true;
 	btnAbort.disabled = false;
+	checkRemoveAudio.disabled = true;
+	inputFileSize.disabled = true;
 	progressBar.style.width = "0%";
 });
 
 ipcRenderer.on("compressionComplete", (event) => {
-	lblStatus.innerText = "Compression complete.";
+	lblStatus.innerText = "Compression complete, enjoy!\nPlease consider suppporting me.";
 	btnCompress.disabled = true;
 	btnAbort.disabled = true;
+	checkRemoveAudio.disabled = false;
+	inputFileSize.disabled = false;
+	progressBar.style.width = "100%";
 });
 
 ipcRenderer.on("compressionError", (event, err) => {
-	lblStatus.innerText = `An error occured:\n${err}`;
+	lblStatus.innerText = err;
 	btnCompress.disabled = true;
 	btnAbort.disabled = true;
+	checkRemoveAudio.disabled = false;
+	inputFileSize.disabled = false;
+	progressBar.style.width = "100%";
 });
