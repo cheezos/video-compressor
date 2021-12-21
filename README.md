@@ -4,7 +4,7 @@ A beautiful, simple video compressor.
 
 ### Features
 
-- Compress multiple video files in a queue system.
+- Compress multiple videos in a queue system.
 - Compress videos to any file size.
 - Remove audio from videos.
 
