@@ -10,7 +10,7 @@ A beautiful, simple video compressor.
 
 ### Preview
 
-![Screenshot 1](https://github.com/big-slime/video-compressor/raw/main/preview.gif)
+![Screenshot 1](https://github.com/big-slime/video-compressor/raw/electron/preview.gif)
 
 ### Love this app?
 
