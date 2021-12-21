@@ -7,20 +7,49 @@
 		<link rel="stylesheet" href="https://bootswatch.com/5/darkly/bootstrap.min.css" />
 		<title>Big Slime Video Compressor</title>
 	</head>
-	<body>
+	<body style="overflow: hidden">
+		<!-- Drop Zone -->
 		<div
 			id="drop-zone"
-			style="display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 10px; margin: 10px auto; width: 90%; height: 60vh; border: 3px dotted rgb(50, 50, 50)"
+			style="
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				text-align: center;
+				border-radius: 10px;
+				margin: 10px 10px 10px 10px;
+				height: 150px;
+				border: 3px dotted rgb(50, 50, 50);
+				background: rgb(20, 20, 20);
+			"
 		>
 			<h5><small id="lbl-status" class="text-muted">Drop your videos here.</small></h5>
 		</div>
-		<div style="display: flex; align-items: center; justify-content: center; text-align: center; margin-top: 10px">
+		<!-- Progress -->
+		<div style="margin: 10px 10px 10px 10px" class="progress">
+			<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+		</div>
+		<!-- Main Buttons -->
+		<div style="display: flex; align-items: center; justify-content: center; text-align: center; margin: 10px 10px 10px 10px">
 			<div style="display: flex; margin: 5px">
 				<button type="button" class="btn btn-primary" id="btn-compress" disabled>Compress</button>
 			</div>
 			<div style="display: flex; margin: 5px">
 				<button type="button" class="btn btn-danger" id="btn-abort" disabled>Abort</button>
 			</div>
+		</div>
+		<!-- Options -->
+		<div style="margin: 10px auto 10px auto">
+			<div style="display: table; margin-left: auto; margin-right: auto" class="form-check form-switch">
+				<input id="check-remove-audio" class="form-check-input" type="checkbox" />
+				<label class="form-check-label" for="flexSwitchCheckDefault">Remove Audio</label>
+			</div>
+		</div>
+		<div style="display: flex; height: 15px; margin-left: 25%; margin-right: 25%">
+			<input class="form-control form-control-sm" type="text" placeholder="Enter a file size in megabytes." id="inputSmall" />
+		</div>
+		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; width: 100%; background: rgb(20, 20, 20)">
+			<small id="lbl-footer" class="text-muted">github.com/big-slime | v2.0.0</small>
 		</div>
 		<script>
 			const exports = {};

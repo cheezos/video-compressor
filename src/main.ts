@@ -6,8 +6,8 @@ let videoData: { base: string; path: string; name: string; ext: string }[] = [];
 
 app.on("ready", () => {
 	mainWindow = new BrowserWindow({
-		width: 400,
-		height: 300,
+		width: 350,
+		height: 425,
 		webPreferences: {
 			contextIsolation: false,
 			nodeIntegration: true,
