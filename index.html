@@ -27,7 +27,7 @@
 		</div>
 		<!-- Progress -->
 		<div style="margin: 10px 10px 10px 10px" class="progress">
-			<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 75%"></div>
+			<div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
 		</div>
 		<!-- Main Buttons -->
 		<div style="display: flex; align-items: center; justify-content: center; text-align: center; margin: 10px 10px 10px 10px">
@@ -38,16 +38,18 @@
 				<button type="button" class="btn btn-danger" id="btn-abort" disabled>Abort</button>
 			</div>
 		</div>
-		<!-- Options -->
+		<!-- Remove Audio -->
 		<div style="margin: 10px auto 10px auto">
 			<div style="display: table; margin-left: auto; margin-right: auto" class="form-check form-switch">
 				<input id="check-remove-audio" class="form-check-input" type="checkbox" />
 				<label class="form-check-label" for="flexSwitchCheckDefault">Remove Audio</label>
 			</div>
 		</div>
-		<div style="display: flex; height: 15px; margin-left: 25%; margin-right: 25%">
-			<input class="form-control form-control-sm" type="text" placeholder="Enter a file size in megabytes." id="inputSmall" />
+		<!-- File Size -->
+		<div style="display: flex; height: 15px; margin-left: 20%; margin-right: 20%">
+			<input id="edit-file-size" class="form-control form-control-sm" type="text" placeholder="Enter a file size in megabytes." />
 		</div>
+		<!-- Footer -->
 		<div style="position: absolute; display: flex; justify-content: center; bottom: 0; width: 100%; background: rgb(20, 20, 20)">
 			<small id="lbl-footer" class="text-muted">github.com/big-slime | v2.0.0</small>
 		</div>
