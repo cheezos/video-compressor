@@ -12,7 +12,7 @@ let cmd: any = null;
 app.on("ready", () => {
 	mainWindow = new BrowserWindow({
 		width: 350,
-		height: 450,
+		height: 500,
 		webPreferences: {
 			contextIsolation: false,
 			nodeIntegration: true,
@@ -45,11 +45,11 @@ ipcMain.on("droppedVideos", (event, vids: string[]) => {
 	videoData = getVideoData(vids);
 });
 
-ipcMain.on("requestCompress", (event, removeAudio: boolean, targetFileSize: number) => {
+ipcMain.on("requestCompress", (event, removeAudio: boolean, h265: boolean, minBitrate: number, targetFileSize: number) => {
 	currentIndex = 0;
 	currentProgress = 0;
 
-	compressQueue(mainWindow, videoData, removeAudio, targetFileSize)
+	compressQueue(mainWindow, videoData, removeAudio, h265, minBitrate, targetFileSize)
 		.then(() => {
 			event.reply("compressionComplete");
 			new Notification({ title: "Job done!", body: "Your new videos are located in the same folder." }).show();
@@ -64,7 +64,14 @@ ipcMain.on("requestAbort", (event) => {
 	killFFmpeg();
 });
 
-export function compressQueue(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }[], removeAudio: boolean, targetFileSize: number): Promise<boolean> {
+export function compressQueue(
+	window: BrowserWindow,
+	videoData: { base: string; path: string; name: string; ext: string }[],
+	removeAudio: boolean,
+	h265: boolean,
+	minBitrate: number,
+	targetFileSize: number
+): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
 		window.webContents.send("compressionStart");
 		totalProgress = videoData.length * 2;
@@ -74,9 +81,9 @@ export function compressQueue(window: BrowserWindow, videoData: { base: string; 
 
 			getVideoDuration(videoData[currentIndex].base)
 				.then((duration: number) => {
-					const bitrate = getCalculatedVideoBitrate(duration, targetFileSize);
+					const bitrate = getCalculatedVideoBitrate(duration, minBitrate, targetFileSize);
 
-					compressVideo(window, videoData[currentIndex], bitrate, removeAudio)
+					compressVideo(window, videoData[currentIndex], bitrate, removeAudio, h265)
 						.then(() => {
 							if (currentIndex + 1 < videoData.length) {
 								currentIndex += 1;
@@ -98,16 +105,23 @@ export function compressQueue(window: BrowserWindow, videoData: { base: string; 
 	});
 }
 
-function compressVideo(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }, bitrate: number, removeAudio: boolean): Promise<boolean> {
+function compressVideo(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }, bitrate: number, removeAudio: boolean, h265: boolean): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
 		cmd = FfmpegCommand();
 
-		let pass1 = [`-y`, `-c:v libx264`, `-b:v ${bitrate}k`, `-pass 1`, `-an`, `-f mp4`];
-		let pass2 = [`-c:v libx264`, `-b:v ${bitrate}k`, `-pass 2`, `-c:a aac`, `-b:a 128k`];
+		let audioArg = "-b:a 128k";
+		let codec = "-c:v libx264";
 
 		if (removeAudio) {
-			pass2 = [`-c:v libx264`, `-b:v ${bitrate}k`, `-pass 2`, `-an`];
+			audioArg = "-an";
 		}
+
+		if (h265) {
+			codec = "-c:v libx265";
+		}
+
+		let pass1 = [`-y`, codec, `-b:v ${bitrate}k`, `-pass 1`, `-an`, `-f mp4`];
+		let pass2 = [codec, `-b:v ${bitrate}k`, `-pass 2`, `-c:a aac`, audioArg];
 
 		cmd.setFfmpegPath(__dirname + "/ffmpeg.exe");
 		cmd.setFfprobePath(__dirname + "/ffprobe.exe");
