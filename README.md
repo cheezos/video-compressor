@@ -7,6 +7,8 @@ A beautiful, simple video compressor.
 - Compress multiple videos in a queue system.
 - Compress videos to any file size.
 - Remove audio from videos.
+- H.265 codec option.
+- Set a minimum video bitrate.
 
 ### Preview
 
