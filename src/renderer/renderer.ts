@@ -29,11 +29,11 @@ btnAbort?.addEventListener("click", () => {
 });
 
 btnSupport?.addEventListener("click", () => {
-	shell.openExternal("https://ko-fi.com/bigslime");
+	shell.openExternal("https://ko-fi.com/slugnasty");
 });
 
 btnGithub?.addEventListener("click", () => {
-	shell.openExternal("https://github.com/big-slime/video-compressor");
+	shell.openExternal("https://github.com/slugnasty/video-compressor");
 });
 
 dropZone?.addEventListener("dragover", (event) => {
@@ -56,6 +56,14 @@ dropZone?.addEventListener("drop", (event) => {
 	lblStatusSmall.innerText = "Click 'Compress' to begin.";
 	btnCompress.disabled = false;
 	ipcRenderer.send("droppedVideos", videoPaths);
+});
+
+ipcRenderer.on("message", (event, bigText: string, smallText?: string) => {
+	lblStatus.innerText = bigText;
+
+	if (smallText) {
+		lblStatusSmall.innerText = smallText;
+	}
 });
 
 ipcRenderer.on("progressUpdate", (event, currentValue: number, totalValue: number) => {

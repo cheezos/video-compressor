@@ -1,8 +1,8 @@
 import { app, BrowserWindow, ipcMain, Notification } from "electron";
-import { getVideoData, getVideoDuration, getCalculatedVideoBitrate } from "./utils";
+import { getFFmpeg, getVideoData, getVideoDuration, getCalculatedVideoBitrate } from "./utils";
 import FfmpegCommand from "fluent-ffmpeg";
 
-let mainWindow: BrowserWindow;
+export let mainWindow: BrowserWindow;
 let videoData: { base: string; path: string; name: string; ext: string }[] = [];
 let currentIndex: number = 0;
 let currentProgress: number = 1;
@@ -18,7 +18,6 @@ app.on("ready", () => {
 			nodeIntegration: true,
 			preload: __dirname + "/preload.js",
 		},
-		icon: __dirname + "/icon.ico",
 		show: false,
 		resizable: false,
 		autoHideMenuBar: true,
@@ -29,6 +28,8 @@ app.on("ready", () => {
 
 	mainWindow.on("ready-to-show", () => {
 		mainWindow.show();
+
+		getFFmpeg();
 	});
 
 	console.log("Window ready.");
@@ -52,7 +53,7 @@ ipcMain.on("requestCompress", (event, removeAudio: boolean, h265: boolean, minBi
 	compressQueue(mainWindow, videoData, removeAudio, h265, minBitrate, targetFileSize)
 		.then(() => {
 			event.reply("compressionComplete");
-			new Notification({ title: "Job done!", body: "Your new videos are located in the same folder." }).show();
+			new Notification({ title: "Compression complete!", body: "Your new videos are located in the same folder." }).show();
 		})
 		.catch((err) => {
 			event.reply("compressionError", err);
@@ -105,7 +106,13 @@ export function compressQueue(
 	});
 }
 
-function compressVideo(window: BrowserWindow, videoData: { base: string; path: string; name: string; ext: string }, bitrate: number, removeAudio: boolean, h265: boolean): Promise<boolean> {
+function compressVideo(
+	window: BrowserWindow,
+	videoData: { base: string; path: string; name: string; ext: string },
+	bitrate: number,
+	removeAudio: boolean,
+	h265: boolean
+): Promise<boolean> {
 	return new Promise<boolean>((resolve, reject) => {
 		cmd = FfmpegCommand();
 
@@ -123,8 +130,8 @@ function compressVideo(window: BrowserWindow, videoData: { base: string; path: s
 		let pass1 = [`-y`, codec, `-b:v ${bitrate}k`, `-pass 1`, `-an`, `-f mp4`];
 		let pass2 = [codec, `-b:v ${bitrate}k`, `-pass 2`, `-c:a aac`, audioArg];
 
-		cmd.setFfmpegPath(__dirname + "/ffmpeg.exe");
-		cmd.setFfprobePath(__dirname + "/ffprobe.exe");
+		cmd.setFfmpegPath(getFFmpeg()[0]);
+		cmd.setFfprobePath(getFFmpeg()[1]);
 		cmd.input(videoData.base);
 		cmd.outputOptions(pass1);
 		cmd.output(`${videoData.path}temp`);
@@ -134,8 +141,8 @@ function compressVideo(window: BrowserWindow, videoData: { base: string; path: s
 			window.webContents.send("progressUpdate", currentProgress, totalProgress);
 
 			cmd = FfmpegCommand();
-			cmd.setFfmpegPath(__dirname + "/ffmpeg.exe");
-			cmd.setFfprobePath(__dirname + "/ffprobe.exe");
+			cmd.setFfmpegPath(getFFmpeg()[0]);
+			cmd.setFfprobePath(getFFmpeg()[1]);
 			cmd.input(videoData.base);
 			cmd.outputOptions(pass2);
 			cmd.output(`${videoData.path}${videoData.name}-compressed${videoData.ext}`);

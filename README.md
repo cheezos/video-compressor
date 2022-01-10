@@ -1,4 +1,4 @@
-## Big Slime Video Compressor
+## Slugnasty Video Compressor
 
 A beautiful, simple video compressor.
 
@@ -12,8 +12,8 @@ A beautiful, simple video compressor.
 
 ### Preview
 
-![Screenshot 1](https://github.com/big-slime/video-compressor/blob/main/preview.gif)
+![Screenshot 1](https://github.com/slugnasty/video-compressor/blob/main/preview.gif)
 
 ### Love this app?
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/bigslime)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/slugnasty)

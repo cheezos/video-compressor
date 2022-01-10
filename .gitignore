@@ -1,4 +1,5 @@
 node_modules
-dist
 ffmpeg2pass-0.log
 ffmpeg2pass-0.log.mbtree
+video-compressor-build*
+
