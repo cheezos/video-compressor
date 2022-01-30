@@ -54,8 +54,8 @@ function getFFmpeg() {
             ffprobePath = "ffprobe";
         }
         else {
-            require("./main").mainWindow.webContents.send("message", "FFmpeg missing!", "Please install FFmpeg before continuing.");
-            new electron_1.Notification({ title: "FFmpeg missing!", body: "Please install FFmpeg before continuing." }).show();
+            require("./main").mainWindow.webContents.send("message", "FFmpeg missing!", "Please install FFmpeg before continuing");
+            new electron_1.Notification({ title: "FFmpeg missing!", body: "Please install FFmpeg before continuing" }).show();
             ffmpegPath = "null";
             ffprobePath = "null";
         }

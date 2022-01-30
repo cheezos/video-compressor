@@ -12,7 +12,7 @@ let cmd: any = null;
 app.on("ready", () => {
 	mainWindow = new BrowserWindow({
 		width: 350,
-		height: 500,
+		height: 415,
 		webPreferences: {
 			contextIsolation: false,
 			nodeIntegration: true,
@@ -24,7 +24,6 @@ app.on("ready", () => {
 	});
 
 	mainWindow.loadFile("./index.html");
-	// mainWindow.webContents.openDevTools();
 
 	mainWindow.on("ready-to-show", () => {
 		mainWindow.show();
@@ -32,7 +31,7 @@ app.on("ready", () => {
 		getFFmpeg();
 	});
 
-	console.log("Window ready.");
+	console.log("Window ready");
 });
 
 app.on("window-all-closed", () => {
@@ -53,11 +52,11 @@ ipcMain.on("requestCompress", (event, removeAudio: boolean, h265: boolean, minBi
 	compressQueue(mainWindow, videoData, removeAudio, h265, minBitrate, targetFileSize)
 		.then(() => {
 			event.reply("compressionComplete");
-			new Notification({ title: "Compression complete!", body: "Your new videos are located in the same folder." }).show();
+			new Notification({ title: "Compression complete", body: "Your new videos are located in the same directory" }).show();
 		})
 		.catch((err) => {
 			event.reply("compressionError", err);
-			new Notification({ title: "Error!", body: "There was an error during compression." }).show();
+			new Notification({ title: "Error", body: "There was an error during compression" }).show();
 		});
 });
 
@@ -173,6 +172,6 @@ function compressVideo(
 function killFFmpeg(): void {
 	if (cmd != null) {
 		cmd.kill();
-		console.log("Killed FFmpeg process.");
+		console.log("Killed FFmpeg process");
 	}
 }

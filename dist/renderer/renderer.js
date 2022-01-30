@@ -43,8 +43,8 @@ dropZone?.addEventListener("drop", (event) => {
     for (const file of files) {
         videoPaths.push(file.path);
     }
-    lblStatus.innerText = `${videoPaths.length} video(s) ready to compress.`;
-    lblStatusSmall.innerText = "Click 'Compress' to begin.";
+    lblStatus.innerText = `${videoPaths.length} video(s) ready to compress`;
+    lblStatusSmall.innerText = "Click 'Compress' to begin";
     btnCompress.disabled = false;
     electron_1.ipcRenderer.send("droppedVideos", videoPaths);
 });
@@ -72,8 +72,8 @@ electron_1.ipcRenderer.on("compressionStart", (event) => {
     progressBar.style.width = "0%";
 });
 electron_1.ipcRenderer.on("compressionComplete", (event) => {
-    lblStatus.innerText = "Compression complete, enjoy!";
-    lblStatusSmall.innerText = "Please consider supporting my work :)";
+    lblStatus.innerText = "Compression complete";
+    lblStatusSmall.innerText = "Your new videos are located in the same directory";
     btnCompress.disabled = true;
     btnAbort.disabled = true;
     checkRemoveAudio.disabled = false;
@@ -83,8 +83,8 @@ electron_1.ipcRenderer.on("compressionComplete", (event) => {
     progressBar.style.width = "100%";
 });
 electron_1.ipcRenderer.on("compressionError", (event, err) => {
-    lblStatus.innerText = err;
-    lblStatusSmall.innerText = "";
+    lblStatus.innerText = "Aborted compression";
+    lblStatusSmall.innerText = "Drop your videos here and try again";
     btnCompress.disabled = true;
     btnAbort.disabled = true;
     checkRemoveAudio.disabled = false;

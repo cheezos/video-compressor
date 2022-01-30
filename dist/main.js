@@ -15,7 +15,7 @@ let cmd = null;
 electron_1.app.on("ready", () => {
     exports.mainWindow = new electron_1.BrowserWindow({
         width: 350,
-        height: 500,
+        height: 415,
         webPreferences: {
             contextIsolation: false,
             nodeIntegration: true,
@@ -26,12 +26,11 @@ electron_1.app.on("ready", () => {
         autoHideMenuBar: true,
     });
     exports.mainWindow.loadFile("./index.html");
-    // mainWindow.webContents.openDevTools();
     exports.mainWindow.on("ready-to-show", () => {
         exports.mainWindow.show();
         (0, utils_1.getFFmpeg)();
     });
-    console.log("Window ready.");
+    console.log("Window ready");
 });
 electron_1.app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
@@ -48,11 +47,11 @@ electron_1.ipcMain.on("requestCompress", (event, removeAudio, h265, minBitrate, 
     compressQueue(exports.mainWindow, videoData, removeAudio, h265, minBitrate, targetFileSize)
         .then(() => {
         event.reply("compressionComplete");
-        new electron_1.Notification({ title: "Compression complete!", body: "Your new videos are located in the same folder." }).show();
+        new electron_1.Notification({ title: "Compression complete", body: "Your new videos are located in the same directory" }).show();
     })
         .catch((err) => {
         event.reply("compressionError", err);
-        new electron_1.Notification({ title: "Error!", body: "There was an error during compression." }).show();
+        new electron_1.Notification({ title: "Error", body: "There was an error during compression" }).show();
     });
 });
 electron_1.ipcMain.on("requestAbort", (event) => {
@@ -136,6 +135,6 @@ function compressVideo(window, videoData, bitrate, removeAudio, h265) {
 function killFFmpeg() {
     if (cmd != null) {
         cmd.kill();
-        console.log("Killed FFmpeg process.");
+        console.log("Killed FFmpeg process");
     }
 }

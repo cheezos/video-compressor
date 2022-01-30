@@ -1,4 +1,4 @@
-## Slugnasty Video Compressor
+## Bepto Video Compressor
 
 A beautiful, simple video compressor.
 
@@ -12,7 +12,7 @@ A beautiful, simple video compressor.
 
 ### Preview
 
-![Screenshot 1](https://github.com/slugnasty/video-compressor/blob/main/preview.gif)
+![Preview](https://github.com/slugnasty/video-compressor/blob/main/preview.gif)
 
 ### Love this app?
 

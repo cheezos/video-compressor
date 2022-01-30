@@ -1,28 +1,19 @@
 {
 	"name": "video-compressor",
-	"version": "2.0.1",
-	"description": "",
+	"version": "2.1.1",
+	"description": "A beautiful, simple video compressor.",
 	"main": "dist/main.js",
 	"scripts": {
-		"start": "tsc && electron .",
-		"dev": "concurrently \"tsc -w\" \"electron .\""
+		"start": "tsc && electron ."
 	},
-	"repository": {
-		"type": "git"
-	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"bugs": {},
 	"dependencies": {
 		"fluent-ffmpeg": "^2.1.2"
 	},
 	"devDependencies": {
-		"@types/electron": "^1.6.10",
 		"@types/fluent-ffmpeg": "^2.1.20",
-		"concurrently": "^6.5.0",
-		"electron": "^16.0.6",
-		"ts-loader": "^9.2.6",
-		"typescript": "^4.5.4"
+		"concurrently": "^6.5.1",
+		"electron": "^16.0.8",
+		"electron-packager": "^15.4.0",
+		"typescript": "^4.5.5"
 	}
 }
