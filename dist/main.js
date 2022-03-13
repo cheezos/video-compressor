@@ -13,9 +13,10 @@ let currentProgress = 1;
 let totalProgress = 1;
 let cmd = null;
 electron_1.app.on("ready", () => {
+    electron_1.app.setAppUserModelId("Bepto Video Compressor");
     exports.mainWindow = new electron_1.BrowserWindow({
-        width: 350,
-        height: 415,
+        width: 310,
+        height: 390,
         webPreferences: {
             contextIsolation: false,
             nodeIntegration: true,
@@ -41,23 +42,23 @@ electron_1.app.on("window-all-closed", () => {
 electron_1.ipcMain.on("droppedVideos", (event, vids) => {
     videoData = (0, utils_1.getVideoData)(vids);
 });
-electron_1.ipcMain.on("requestCompress", (event, removeAudio, h265, minBitrate, targetFileSize) => {
+electron_1.ipcMain.on("requestCompress", (event, removeAudio, h265, targetFileSize) => {
     currentIndex = 0;
     currentProgress = 0;
-    compressQueue(exports.mainWindow, videoData, removeAudio, h265, minBitrate, targetFileSize)
+    compressQueue(exports.mainWindow, videoData, removeAudio, h265, targetFileSize)
         .then(() => {
         event.reply("compressionComplete");
-        new electron_1.Notification({ title: "Compression complete", body: "Your new videos are located in the same directory" }).show();
+        new electron_1.Notification({ title: "Compression complete!" }).show();
     })
         .catch((err) => {
         event.reply("compressionError", err);
-        new electron_1.Notification({ title: "Error", body: "There was an error during compression" }).show();
+        new electron_1.Notification({ title: "Aborted!" }).show();
     });
 });
 electron_1.ipcMain.on("requestAbort", (event) => {
     killFFmpeg();
 });
-function compressQueue(window, videoData, removeAudio, h265, minBitrate, targetFileSize) {
+function compressQueue(window, videoData, removeAudio, h265, targetFileSize) {
     return new Promise((resolve, reject) => {
         window.webContents.send("compressionStart");
         totalProgress = videoData.length * 2;
@@ -65,7 +66,7 @@ function compressQueue(window, videoData, removeAudio, h265, minBitrate, targetF
             console.log(`Compressing ${currentIndex + 1}/${videoData.length}...`);
             (0, utils_1.getVideoDuration)(videoData[currentIndex].base)
                 .then((duration) => {
-                const bitrate = (0, utils_1.getCalculatedVideoBitrate)(duration, minBitrate, targetFileSize);
+                const bitrate = (0, utils_1.getCalculatedVideoBitrate)(duration, targetFileSize);
                 compressVideo(window, videoData[currentIndex], bitrate, removeAudio, h265)
                     .then(() => {
                     if (currentIndex + 1 < videoData.length) {
@@ -91,16 +92,16 @@ exports.compressQueue = compressQueue;
 function compressVideo(window, videoData, bitrate, removeAudio, h265) {
     return new Promise((resolve, reject) => {
         cmd = (0, fluent_ffmpeg_1.default)();
-        let audioArg = "-b:a 128k";
+        let audio = "-b:a 128k";
         let codec = "-c:v libx264";
         if (removeAudio) {
-            audioArg = "-an";
+            audio = "-an";
         }
         if (h265) {
             codec = "-c:v libx265";
         }
-        let pass1 = [`-y`, codec, `-b:v ${bitrate}k`, `-pass 1`, `-an`, `-f mp4`];
-        let pass2 = [codec, `-b:v ${bitrate}k`, `-pass 2`, `-c:a aac`, audioArg];
+        let pass1 = [`-y`, codec, `-b:v ${bitrate}k`, `-r 24`, `-vf scale=-1:540`, `-pass 1`, `-an`, `-f mp4`];
+        let pass2 = [codec, `-b:v ${bitrate}k`, `-r 24`, `-vf scale=-1:540`, `-pass 2`, `-c:a aac`, audio];
         cmd.setFfmpegPath((0, utils_1.getFFmpeg)()[0]);
         cmd.setFfprobePath((0, utils_1.getFFmpeg)()[1]);
         cmd.input(videoData.base);
@@ -118,6 +119,7 @@ function compressVideo(window, videoData, bitrate, removeAudio, h265) {
             cmd.on("end", () => {
                 currentProgress += 1;
                 window.webContents.send("progressUpdate", currentProgress, totalProgress);
+                electron_1.shell.openPath(videoData.path);
                 console.log(`Compressed ${videoData.name}`);
                 resolve(true);
             });

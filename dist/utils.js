@@ -38,8 +38,8 @@ function getVideoDuration(videoPath) {
     });
 }
 exports.getVideoDuration = getVideoDuration;
-function getCalculatedVideoBitrate(duration, minBitrate, targetFileSize) {
-    const magic = Math.max((targetFileSize * 8192.0) / (1.048576 * duration) - 128, minBitrate);
+function getCalculatedVideoBitrate(duration, targetFileSize) {
+    const magic = Math.max((targetFileSize * 8192.0) / (1.048576 * duration) - 128, 100);
     console.log(`Calculated bitrate: ${magic}`);
     return magic;
 }
