@@ -12,3 +12,7 @@ An elegant, simple video compressor.
 ----------
 
 ![Preview](https://github.com/cheezos/video-compressor/blob/main/preview.png)
+
+----------
+
+Created with Typescript, FFmpeg and Electron.
