@@ -1,3 +1,7 @@
+## Notice
+
+This project is no longer being updated or maintained, feel free to fork :)
+
 ## Bepto Video Compressor
 
 An elegant, simple video compressor.
