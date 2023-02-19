@@ -1,22 +1,18 @@
-## Notice
+## Cheezos Video Compressor
 
-This project is no longer being updated or maintained, feel free to fork :)
-
-## Bepto Video Compressor
-
-An elegant, simple video compressor.
+A no-BS video compressor.
 
 ## Features
 
-- Compress multiple videos in a queue system.
-- Compress videos to any file size.
-- Remove audio from videos.
-- H.265 codec option.
+- Compresses multiple videos in a queue system.
+- Compresses videos to any file size.
+- Automatically downloads FFmpeg (Window only).
+- Notifies on completion.
 
-----------
+---
 
 ![Preview](https://github.com/cheezos/video-compressor/blob/main/preview.png)
 
-----------
+---
 
-Created with Typescript, FFmpeg and Electron.
+Created with Python, PyQt and FFmpeg.
