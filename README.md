@@ -6,7 +6,7 @@ A no-BS video compressor.
 
 - Compresses multiple videos in a queue system.
 - Compresses videos to any file size.
-- Automatically downloads FFmpeg (Window only).
+- Automatically downloads FFmpeg (Windows only).
 - Notifies on completion.
 
 ---
