@@ -64,7 +64,7 @@ class Window(QWidget):
         self._label_log.setWordWrap(True)
         self._label_log.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label_log.setStyleSheet("border: 1px solid black; margin: 1px")
-        self._button_foot = QPushButton(f"v{g.VERSION} | Created by Cheezos", self)
+        self._button_foot = QPushButton(f"v{g.VERSION}", self)
         self._button_foot.resize(SBW, SBH)
         X, Y = g.B_FOOT_POS
         self._button_foot.move(X, Y)
@@ -159,14 +159,14 @@ class Window(QWidget):
         print("Verifying directories...")
         g.dir_root = os.path.dirname(os.path.abspath(__file__))
         print(f"Root: {g.dir_root}")
-        g.dir_bin = f"{g.dir_root}/bin"
+        g.dir_bin = os.path.join(g.dir_root, "bin")
 
         if not os.path.exists(g.dir_bin):
             os.mkdir(g.dir_bin)
             print(f"Created bin directory")
 
         print(f"Bin: {g.dir_bin}")
-        g.dir_output = f"{g.dir_root}/output"
+        g.dir_output = os.path.join(g.dir_root, "output")
 
         if not os.path.exists(g.dir_output):
             os.mkdir(g.dir_output)
@@ -177,14 +177,16 @@ class Window(QWidget):
 
     def _handle_windows(self):
         print("Windows detected")
-        FFMPEG_PATH = f"{g.dir_bin}/ffmpeg.exe"
-        FFPROBE_PATH = f"{g.dir_bin}/ffprobe.exe"
+        FFMPEG_PATH = os.path.join(g.dir_bin, "ffmpeg.exe")
+        print(f"FFmpeg: {FFMPEG_PATH}")
+        FFPROBE_PATH = os.path.join(g.dir_bin, "ffprobe.exe")
+        print(f"FFprobe: {FFPROBE_PATH}")
 
         if os.path.exists(FFMPEG_PATH) and os.path.exists(FFPROBE_PATH):
             BIN_PATH = g.dir_bin
             g.ffmpeg_installed = True
-            g.ffmpeg_path = f"{BIN_PATH}/ffmpeg.exe"
-            g.ffprobe_path = f"{BIN_PATH}/ffprobe.exe"
+            g.ffmpeg_path = FFMPEG_PATH
+            g.ffprobe_path = FFPROBE_PATH
             self._button_select.setEnabled(True)
         else:
             self._download_thread = DownloadThread()

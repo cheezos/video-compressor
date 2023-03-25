@@ -20,28 +20,18 @@ class CompressionThread(QThread):
         PASS = "1" if pass_1 else "2"
         MSG = f"Compressing, please wait...\n\nVideo queue: {COMPLETED_COUNT}/{QUEUE_COUNT}\nPass: {PASS}/2"
         FILE_NAME = file_path.split("/")[-1]
-        FFMPEG = g.ffmpeg_path
-        INPUT = file_path
+        FFMPEG_PATH = g.ffmpeg_path
+        INPUT_PATH = file_path
         BITRATE = f"{bitrate}k"
         print(f"New bitrate: {BITRATE}")
-        OUTPUT = rf"{g.dir_output}/{FILE_NAME}-compressed.mp4"
+        OUTPUT_PATH = os.path.join(g.dir_output, f"{FILE_NAME}-compressed.mp4")
         print(MSG)
         cmd = ""
 
         if pass_1:
-            cmd = r""""%s" -i "%s" -y -b:v %s -an -pass 1 -f mp4 TEMP""" % (
-                FFMPEG,
-                INPUT,
-                BITRATE,
-            )
+            cmd = f'"{FFMPEG_PATH}" -i "{INPUT_PATH}" -y -b:v {BITRATE} -an -pass 1 -f mp4 TEMP'
         else:
-            cmd = r""""%s" -i "%s" -y -b:v %sk -b:a %sk -pass 2 "%s" """ % (
-                g.ffmpeg_path,
-                file_path,
-                bitrate,
-                128,
-                OUTPUT,
-            )
+            cmd = f'"{FFMPEG_PATH}" -i "{INPUT_PATH}" -y -b:v {BITRATE} -b:a 128k -pass 2 "{OUTPUT_PATH}"'
 
         print(cmd)
         self.update_label.emit(MSG)

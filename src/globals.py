@@ -1,4 +1,4 @@
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 FFMPEG_DL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
 TITLE = f"Cheezos Video Compressor v{VERSION}"
 READY_TEXT = f"Select your videos to get started."
