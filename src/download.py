@@ -20,12 +20,8 @@ class DownloadThread(QThread):
         print("Downloading FFmpeg...")
         bin_path = g.bin_dir
         file_path = os.path.join(bin_path, "ffmpeg.zip")
-
-        if os.path.exists(file_path):
-            print("Download complete")
-            return
-
         response = requests.get(FFMPEG_DL, stream=True)
+
         if not response.ok:
             print(f"Download failed: {response.status_code}\n{response.text}")
             return
