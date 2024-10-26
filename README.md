@@ -18,10 +18,25 @@ A no bullshit video compressor.
 - Settings persistence between sessions
 - Auto-opens output folder when complete
 
----
+## Build
+
+### Easy Way
+1. Clone the repository.
+2. Run setup.bat
+
+### Manual Way
+1. Open a terminal.
+2. Clone the repository with `git clone https://github.com/cheezos/video-compressor.git`
+3. Enter the project directory with `cd video-compressor`
+4. Create a virtual environment with `python -m venv .venv`
+5. Activate the virtual environment with `.\.venv\Scripts\activate`
+6. Install the required packages with `pip install -r requirements.txt`
+7. Build the application with `python setup.py build`
+
+### The Result
 
 ![Preview](https://github.com/cheezos/video-compressor/blob/main/preview.png)
 
 ---
 
-Created with Python 3.12.6, PyQt6 and FFmpeg.
+Created with Python 3.12.6, PyQt6 and the latest FFmpeg.
