@@ -1,7 +1,7 @@
 import json
 import subprocess
 import os
-import globals as g
+import src.globals as g
 from math import ceil, floor
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -59,11 +59,8 @@ def calculate_video_bitrate(file_path, target_size_mb):
     print(f"Video duration: {v_len} seconds")
     a_rate = get_audio_bitrate(file_path)
     print(f"Audio Bitrate: {a_rate}k")
-    magic = max(
-        1,
-        floor(((target_size_mb * 8192.0) / (1.048576 * v_len) - a_rate)),
-    )
-    return magic
+    total_bitrate = (target_size_mb * 8192.0 * 0.98) / (1.048576 * v_len) - a_rate
+    return max(256, round(total_bitrate))
 
 
 class CompressionThread(QThread):

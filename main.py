@@ -3,10 +3,10 @@ import sys
 import os
 import os
 import psutil
-import globals as g
+import src.globals as g
 from notifypy import Notify
-from download import DownloadThread
-from thread import CompressionThread
+from src.download import DownloadThread
+from src.thread import CompressionThread
 from PyQt6.QtWidgets import (
     QApplication,
     QWidget,
@@ -18,12 +18,7 @@ from PyQt6.QtWidgets import (
     QProgressBar,
 )
 from PyQt6.QtGui import QIcon
-from styles import *
-
-VERSION = "3.1.0"
-TITLE = f"CVC v{VERSION}"
-READY_TEXT = f"Select your videos to get started."
-DEFAULT_SETTINGS = {"target_size": 20.0, "use_gpu": False}
+from src.styles import *
 
 
 def load_settings():
@@ -31,7 +26,7 @@ def load_settings():
         with open(os.path.join(g.res_dir, "settings.json"), "r") as f:
             return json.load(f)
     except:
-        return DEFAULT_SETTINGS
+        return g.DEFAULT_SETTINGS
 
 
 def save_settings(settings):
@@ -60,7 +55,7 @@ class Window(QWidget):
         self.verify_directories()
         self.settings = load_settings()
         self.setFixedSize(WINDOW.w, WINDOW.h)
-        self.setWindowTitle(TITLE)
+        self.setWindowTitle(g.TITLE)
         icon_path = os.path.join(g.res_dir, "icon.ico")
         self.setWindowIcon(QIcon(icon_path))
 
@@ -108,7 +103,7 @@ class Window(QWidget):
         self.checkbox_gpu.setChecked(self.settings["use_gpu"])
 
         # Log Label
-        self.label_log = QLabel(READY_TEXT, self)
+        self.label_log = QLabel(g.READY_TEXT, self)
         self.label_log.setEnabled(True)
         self.label_log.resize(LOG_AREA.w, LOG_AREA.h)
         self.label_log.move(LOG_AREA.x, LOG_AREA.y)
@@ -137,11 +132,14 @@ class Window(QWidget):
 
     def closeEvent(self, event):
         # Save settings when closing
-        self.settings["last_videos"] = g.queue
         self.settings["target_size"] = float(self.edit_size.text())
         self.settings["use_gpu"] = self.checkbox_gpu.isChecked()
         save_settings(self.settings)
         kill_ffmpeg()
+
+        if os.path.exists(os.path.join(g.root_dir, "TEMP")):
+            os.remove(os.path.join(g.root_dir, "TEMP"))
+
         event.accept()
 
     def reset(self):
@@ -155,12 +153,18 @@ class Window(QWidget):
         self.button_abort.setEnabled(False)
         self.button_abort.setStyleSheet(BUTTON_DISABLED_STYLE)
         self.edit_size.setEnabled(True)
-        self.update_log(READY_TEXT)
+        self.update_log(g.READY_TEXT)
         self.update_progress(0)
 
     def verify_directories(self):
         print("Verifying directories...")
-        g.root_dir = os.path.dirname(os.path.abspath(__file__))
+        if getattr(sys, "frozen", False):
+            # Running as compiled executable
+            g.root_dir = os.path.dirname(sys.executable)
+        else:
+            # Running as script
+            g.root_dir = os.path.dirname(os.path.abspath(__file__))
+
         print(f"Root: {g.root_dir}")
         g.bin_dir = os.path.join(g.root_dir, "bin")
 
@@ -245,10 +249,9 @@ class Window(QWidget):
         self.progress_bar.setValue(progress_percentage)
 
     def installed(self):
-        BIN_PATH = g.bin_dir
         g.ffmpeg_installed = True
-        g.ffmpeg_path = os.path.join(BIN_PATH, "ffmpeg.exe")
-        g.ffprobe_path = os.path.join(BIN_PATH, "ffprobe.exe")
+        g.ffmpeg_path = os.path.join(g.bin_dir, "ffmpeg.exe")
+        g.ffprobe_path = os.path.join(g.bin_dir, "ffprobe.exe")
         self.reset()
         n = Notify()
         n.title = "FFmpeg installed!"

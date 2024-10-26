@@ -1,5 +1,5 @@
 # Window dimensions
-from rect import Rect
+from src.rect import Rect
 
 
 WINDOW = Rect(0, 0, 250, 400)

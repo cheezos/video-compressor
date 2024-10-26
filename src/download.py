@@ -1,7 +1,7 @@
 import os
 import requests
 import shutil
-import globals as g
+import src.globals as g
 import zipfile
 from PyQt6.QtCore import QThread, pyqtSignal
 

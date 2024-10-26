@@ -5,7 +5,7 @@
             "name": "Debug App",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/main.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}"
