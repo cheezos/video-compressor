@@ -60,7 +60,7 @@ def calculate_video_bitrate(file_path, target_size_mb):
     a_rate = get_audio_bitrate(file_path)
     print(f"Audio Bitrate: {a_rate}k")
     total_bitrate = (target_size_mb * 8192.0 * 0.98) / (1.048576 * v_len) - a_rate
-    return max(256, round(total_bitrate))
+    return max(1, round(total_bitrate))
 
 
 class CompressionThread(QThread):
