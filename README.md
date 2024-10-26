@@ -24,4 +24,4 @@ A no bullshit video compressor.
 
 ---
 
-Created with Python, PyQt and FFmpeg.
+Created with Python 3.12.6, PyQt6 and FFmpeg.
