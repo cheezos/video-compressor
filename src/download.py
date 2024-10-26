@@ -9,7 +9,8 @@ FFMPEG_DL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmp
 
 
 class DownloadThread(QThread):
-    update_label = pyqtSignal(str)
+    update_log = pyqtSignal(str)
+    update_progress = pyqtSignal(int)
     installed = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -43,15 +44,11 @@ class DownloadThread(QThread):
                     downloaded += len(chunk)
                     f.write(chunk)
                     percentage = (downloaded / total_size) * 100
-                    progress_chars = int(25 * downloaded / total_size)
-                    # Using Unicode blocks for smoother progress bar
-                    progress_bar = "█" * progress_chars + "░" * (25 - progress_chars)
-                    # Converting bytes to MB for better readability
                     downloaded_mb = downloaded / (1024 * 1024)
                     total_mb = total_size / (1024 * 1024)
-                    progress_text = f"{downloaded_mb:.1f} MB / {total_mb:.1f} MB ({percentage:.1f}%)"
-                    message = f"This app relies on FFmpeg to compress the videos, please wait while it downloads...\n\n{progress_text}\n{progress_bar}"
-                    self.update_label.emit(message)
+                    message = f"Downloading FFmpeg...\n{downloaded_mb:.1f} MB / {total_mb:.1f} MB"
+                    self.update_log.emit(message)
+                    self.update_progress.emit(int(percentage))
 
     def install_ffmpeg(self):
         print("Installing FFmpeg...")

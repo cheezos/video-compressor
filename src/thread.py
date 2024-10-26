@@ -67,7 +67,8 @@ def calculate_video_bitrate(file_path, target_size_mb):
 
 
 class CompressionThread(QThread):
-    update_label = pyqtSignal(str)
+    update_log = pyqtSignal(str)
+    update_progress = pyqtSignal(int)
     completed = pyqtSignal()
 
     def __init__(self, target_size_mb, use_gpu, parent=None):
@@ -105,24 +106,19 @@ class CompressionThread(QThread):
                 len(g.completed) * 2
             ) + i  # Completed videos * 2 passes + current pass
             progress_percentage = (current_step / total_steps) * 100
-
-            # Create progress bar with 20 segments
-            progress_chars = int(20 * (progress_percentage / 100))
-            progress_bar = "█" * progress_chars + "░" * (20 - progress_chars)
-
+            self.update_progress.emit(int(progress_percentage))
             encoder_type = (
                 f"GPU ({gpu_encoder})" if self.use_gpu and gpu_encoder else "CPU"
             )
-
             status_msg = f"""
-Video Compression Status
+[Compression Status]
 File: {file_name}
 Queue: {len(g.completed) + 1}/{len(g.queue)}
 Pass: {i + 1}/2
 Target Size: {self.target_size_mb}MB
 Bitrate: {video_rate}k
 Encoder: {encoder_type}
-{progress_bar} {progress_percentage:.1f}%"""
+"""
 
             # Rest of the existing code remains the same
             bitrate_str = f"{video_rate}k"
@@ -157,7 +153,7 @@ Encoder: {encoder_type}
 
             cmd = " ".join(cmd_args)
             print(f"Running command: {cmd}")
-            self.update_label.emit(status_msg)
+            self.update_log.emit(status_msg)
             self.process = subprocess.check_call(cmd, shell=False)
 
     def run(self):
@@ -175,5 +171,5 @@ Encoder: {encoder_type}
         )
 
         print(msg)
-        self.update_label.emit(msg)
+        self.update_log.emit(msg)
         self.completed.emit()
