@@ -1,10 +1,10 @@
-.venv/
-.vscode/
+.venv
 output/
 bin/
 build/
 dist/
 __pycache__
 .DS_Store
-*.mp4
 ffmpeg*
+changes.txt
+TEMP

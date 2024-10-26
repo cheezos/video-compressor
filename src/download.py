@@ -1,10 +1,11 @@
 import os
 import requests
 import shutil
-import src.globals as g
+import globals as g
 import zipfile
-from src.utils import *
 from PyQt6.QtCore import QThread, pyqtSignal
+
+FFMPEG_DL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
 
 
 class DownloadThread(QThread):
@@ -14,82 +15,71 @@ class DownloadThread(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    def _download_ffmpeg(self):
+    def download_ffmpeg(self):
         print("Downloading FFmpeg...")
-        BIN_PATH = g.dir_bin
-        URL = g.FFMPEG_DL
-        FILE_PATH = f"{BIN_PATH}/ffmpeg.zip"
+        bin_path = g.bin_dir
+        file_path = os.path.join(bin_path, "ffmpeg.zip")
 
-        if os.path.exists(FILE_PATH):
+        if os.path.exists(file_path):
             print("Download complete")
-        else:
-            R = requests.get(URL, stream=True)
+            return
 
-            if R.ok:
-                print(f"Downloading from {URL}")
-                TOTAL_LENGTH = R.headers.get("content-length")
+        response = requests.get(FFMPEG_DL, stream=True)
+        if not response.ok:
+            print(f"Download failed: {response.status_code}\n{response.text}")
+            return
 
-                with open(FILE_PATH, "wb") as F:
-                    if TOTAL_LENGTH == None:
-                        F.write(R.content)
-                    else:
-                        dl = 0
-                        TOTAL_LENGTH = int(TOTAL_LENGTH)
+        print(f"Source: {FFMPEG_DL}")
+        total_size = response.headers.get("content-length")
 
-                        for DATA in R.iter_content(chunk_size=4096):
-                            dl += len(DATA)
-                            F.write(DATA)
-                            CHAR_COUNT = int(20 * dl / TOTAL_LENGTH)
-                            DL_CHARS = "=" * CHAR_COUNT
-                            EMPTY_CHARS = "  " * (20 - CHAR_COUNT)
-                            PROGRESS = f"{dl}/{TOTAL_LENGTH}"
-                            TEXT = f"This app relies on FFmpeg to compress the videos, please wait while it downloads...\n\n{PROGRESS}\n[{DL_CHARS}{EMPTY_CHARS}]"
-                            self.update_label.emit(TEXT)
-
-                    print("Download complete")
+        with open(file_path, "wb") as f:
+            if total_size is None:
+                f.write(response.content)
             else:
-                print(f"Download failed: {R.status_code}\n{R.text}")
+                downloaded = 0
+                total_size = int(total_size)
 
-    def _install_ffmpeg(self):
+                for chunk in response.iter_content(chunk_size=4096):
+                    downloaded += len(chunk)
+                    f.write(chunk)
+                    percentage = (downloaded / total_size) * 100
+                    progress_chars = int(25 * downloaded / total_size)
+                    # Using Unicode blocks for smoother progress bar
+                    progress_bar = "█" * progress_chars + "░" * (25 - progress_chars)
+                    # Converting bytes to MB for better readability
+                    downloaded_mb = downloaded / (1024 * 1024)
+                    total_mb = total_size / (1024 * 1024)
+                    progress_text = f"{downloaded_mb:.1f} MB / {total_mb:.1f} MB ({percentage:.1f}%)"
+                    message = f"This app relies on FFmpeg to compress the videos, please wait while it downloads...\n\n{progress_text}\n{progress_bar}"
+                    self.update_label.emit(message)
+
+    def install_ffmpeg(self):
         print("Installing FFmpeg...")
-        BIN_PATH = g.dir_bin
-        FILE_PATH = f"{BIN_PATH}/ffmpeg.zip"
-        print("Extracting FFmpeg...")
+        zip_path = os.path.join(g.bin_dir, "ffmpeg.zip")
 
-        with zipfile.ZipFile(FILE_PATH, "r") as F:
-            F.extractall(BIN_PATH)
+        # Extract files
+        with zipfile.ZipFile(zip_path, "r") as zip_file:
+            zip_file.extractall(g.bin_dir)
+        os.remove(zip_path)
 
-        print("FFmpeg extracted")
-        print("Moving extracted files to bin folder...")
-        print("Deleting FFmpeg 7z file...")
-        os.remove(FILE_PATH)
-        print("Deleted")
-        EXTRACTED_PATH = f"{BIN_PATH}/{os.listdir(BIN_PATH)[0]}"
-        EXTRACTED_BIN_PATH = f"{BIN_PATH}/{os.listdir(BIN_PATH)[0]}/bin"
-        FILES = os.listdir(EXTRACTED_BIN_PATH)
+        # Get extracted paths
+        extracted_root = os.path.join(g.bin_dir, os.listdir(g.bin_dir)[0])
+        extracted_bin = os.path.join(extracted_root, "bin")
 
-        for FILE_NAME in FILES:
-            print(f"Moving {FILE_NAME}...")
-            FILE_PATH = f"{EXTRACTED_BIN_PATH}/{FILE_NAME}"
-
+        # Move binaries to target directory
+        for file_name in os.listdir(extracted_bin):
+            src = os.path.join(extracted_bin, file_name)
+            dst = os.path.join(g.bin_dir, file_name)
             try:
-                shutil.move(FILE_PATH, BIN_PATH)
+                shutil.move(src, dst)
             except:
-                print(f"Failed to move {FILE_NAME}, probably already exists")
+                print(f"Skipped {file_name} - file already exists")
 
-        print("Files moved")
-        print("Deleting temp files")
-
-        try:
-            shutil.rmtree(EXTRACTED_PATH)
-            os.remove(f"{BIN_PATH}/ffplay.exe")
-            print("Deleted")
-        except:
-            print("No temp files to delete")
-
-        self.update_label.emit(g.READY_TEXT)
+        # Cleanup
+        shutil.rmtree(extracted_root)
+        os.remove(os.path.join(g.bin_dir, "ffplay.exe"))
 
     def run(self):
-        self._download_ffmpeg()
-        self._install_ffmpeg()
+        self.download_ffmpeg()
+        self.install_ffmpeg()
         self.installed.emit()

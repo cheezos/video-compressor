@@ -1,4 +1,3 @@
-import sys
 import src.globals as g
 from cx_Freeze import setup, Executable
 
@@ -6,22 +5,15 @@ from cx_Freeze import setup, Executable
 build_exe_options = {
     "packages": ["PyQt6"],
     "excludes": ["tkinter"],
-    "include_files": [
-        # "img/",
-    ],
     "optimize": 2,
 }
 
-# base="Win32GUI" should be used only for Windows GUI app
-base = None
-
-# if sys.platform == "win32":
-# base = "Win32GUI"
+base = "Win32GUI"
 
 setup(
     name="CheezosVideoCompressor",
     version=g.VERSION,
-    description="Compresses videos to any file size",
+    description="Compress videos to any file size.",
     options={"build_exe": build_exe_options},
     executables=[
         Executable(
