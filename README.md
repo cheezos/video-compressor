@@ -18,13 +18,17 @@ A no bullshit video compressor.
 - Settings persistence between sessions
 - Auto-opens output folder when complete
 
+### New version on Patreon!
+
+[![Patreon](https://github.com/cheezos/video-compressor/blob/main/patreon.png)](https://patreon.com/cheezos)
+
 ## Build
 
 ### Easy Way
 1. Clone the repository.
 2. Run setup.bat
 
-### Manual Way
+### Hard Way
 1. Open a terminal.
 2. Clone the repository with `git clone https://github.com/cheezos/video-compressor.git`
 3. Enter the project directory with `cd video-compressor`
