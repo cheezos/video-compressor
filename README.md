@@ -20,7 +20,7 @@ A no bullshit video compressor.
 
 ### New version on Patreon!
 
-[![Patreon](https://github.com/cheezos/video-compressor/blob/main/patreon.png)](https://patreon.com/cheezos)
+[![Patreon](https://github.com/cheezos/video-compressor/blob/main/patreon.png)](https://www.patreon.com/cheezos/shop/cheezos-video-compressor-616355?utm_medium=clipboard_copy&utm_source=copyLink&utm_campaign=productshare_creator&utm_content=join_link)
 
 ## Build
 
